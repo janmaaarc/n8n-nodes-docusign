@@ -274,7 +274,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
 
-### v0.1.0
+### v0.0.3
 
 **Initial Release:**
 - Full envelope management (create, send, void, download, recipients, audit)

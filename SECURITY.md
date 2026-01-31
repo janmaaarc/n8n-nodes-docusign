@@ -4,7 +4,7 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 0.1.x   | :white_check_mark: |
+| 0.0.x   | :white_check_mark: |
 
 ## Reporting a Vulnerability
 
@@ -82,7 +82,7 @@ This node implements several security measures:
 
 ## Security Changelog
 
-### v0.1.0
+### v0.0.3
 - Initial release with comprehensive security features
 - JWT token caching with automatic refresh
 - HMAC-SHA256 webhook signature verification
