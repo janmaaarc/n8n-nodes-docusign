@@ -609,7 +609,7 @@ export async function docuSignApiRequestAllItems(
 
     const response = await docuSignApiRequest.call(this, method, endpoint, undefined, qs);
 
-    const items = ((response as IDataObject)[resourceKey] as IDataObject[]) || [];
+    const items = (response[resourceKey] as IDataObject[]) || [];
     returnData.push(...items);
 
     // Check maxItems limit
@@ -618,14 +618,15 @@ export async function docuSignApiRequestAllItems(
     }
 
     // Check if there are more pages
-    const totalSetSize = parseInt((response as IDataObject).totalSetSize as string, 10);
-    const endPosition = parseInt((response as IDataObject).endPosition as string, 10);
+    const totalSetSize = parseInt(String(response.totalSetSize), 10);
+    const endPosition = parseInt(String(response.endPosition), 10);
 
     if (isNaN(totalSetSize) || isNaN(endPosition) || endPosition >= totalSetSize - 1) {
       break;
     }
 
     startPosition = endPosition + 1;
+    // eslint-disable-next-line no-constant-condition
   } while (true);
 
   return returnData;

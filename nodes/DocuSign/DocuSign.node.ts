@@ -66,7 +66,7 @@ async function handleEnvelopeCreate(
   const documentBase64 = getDocumentBase64(documentInput);
 
   // Build primary signer with signature tab
-  const signer = buildSigner(signerEmail, signerName, '1', '1') as IDataObject;
+  const signer = buildSigner(signerEmail, signerName, '1', '1');
 
   // Add signature tab
   const signaturePage = (additionalOptions.signaturePage as number) || 1;
@@ -127,7 +127,7 @@ async function handleEnvelopeCreate(
         addSigner.name as string,
         signerId.toString(),
         routingOrder.toString(),
-      ) as IDataObject;
+      );
 
       // Add signature tab for each document
       const tabs: IDataObject[] = [];
@@ -230,7 +230,7 @@ async function handleEnvelopeGetAll(
   itemIndex: number,
 ): Promise<IDataObject[]> {
   const returnAll = ctx.getNodeParameter('returnAll', itemIndex) as boolean;
-  const filters = ctx.getNodeParameter('filters', itemIndex, {}) as IDataObject;
+  const filters = ctx.getNodeParameter('filters', itemIndex, {});
   const qs: Record<string, string | number> = {};
 
   // Add filters
@@ -259,7 +259,7 @@ async function handleEnvelopeGetAll(
     );
   }
 
-  const limit = ctx.getNodeParameter('limit', itemIndex) as number;
+  const limit = ctx.getNodeParameter('limit', itemIndex);
   qs.count = limit;
 
   const response = await docuSignApiRequest.call(ctx, 'GET', '/envelopes', undefined, qs);
@@ -331,7 +331,7 @@ async function handleEnvelopeDownloadDocument(
   const accountId = credentials.accountId as string;
   const baseUrl = getBaseUrl(environment, region);
 
-  const response = await ctx.helpers.httpRequestWithAuthentication.call(
+  const response = (await ctx.helpers.httpRequestWithAuthentication.call(
     ctx,
     'docuSignApi',
     {
@@ -340,10 +340,10 @@ async function handleEnvelopeDownloadDocument(
       encoding: 'arraybuffer',
       returnFullResponse: true,
     },
-  );
+  )) as { body: Buffer };
 
   const binaryData: IBinaryData = await ctx.helpers.prepareBinaryData(
-    Buffer.from(response.body as ArrayBuffer),
+    Buffer.from(response.body),
     `document_${envelopeId}_${documentId}.pdf`,
     'application/pdf',
   );
@@ -399,7 +399,7 @@ async function handleEnvelopeUpdateRecipients(
 ): Promise<IDataObject> {
   const envelopeId = ctx.getNodeParameter('envelopeId', itemIndex) as string;
   const recipientId = ctx.getNodeParameter('recipientId', itemIndex) as string;
-  const updateFields = ctx.getNodeParameter('updateFields', itemIndex, {}) as IDataObject;
+  const updateFields = ctx.getNodeParameter('updateFields', itemIndex, {});
 
   validateField('Envelope ID', envelopeId, 'uuid');
   validateField('Recipient ID', recipientId, 'required');
@@ -475,7 +475,7 @@ async function handleTemplateGetAll(
   itemIndex: number,
 ): Promise<IDataObject[]> {
   const returnAll = ctx.getNodeParameter('returnAll', itemIndex) as boolean;
-  const filters = ctx.getNodeParameter('filters', itemIndex, {}) as IDataObject;
+  const filters = ctx.getNodeParameter('filters', itemIndex, {});
   const qs: Record<string, string | number> = {};
 
   // Add filters
@@ -499,7 +499,7 @@ async function handleTemplateGetAll(
     );
   }
 
-  const limit = ctx.getNodeParameter('limit', itemIndex) as number;
+  const limit = ctx.getNodeParameter('limit', itemIndex);
   qs.count = limit;
 
   const response = await docuSignApiRequest.call(ctx, 'GET', '/templates', undefined, qs);
@@ -537,8 +537,8 @@ export class DocuSign implements INodeType {
     const items = this.getInputData();
     const returnData: INodeExecutionData[] = [];
 
-    const resource = this.getNodeParameter('resource', 0) as string;
-    const operation = this.getNodeParameter('operation', 0) as string;
+    const resource = this.getNodeParameter('resource', 0);
+    const operation = this.getNodeParameter('operation', 0);
 
     for (let i = 0; i < items.length; i++) {
       try {
@@ -574,7 +574,7 @@ export class DocuSign implements INodeType {
               break;
 
             case 'downloadDocument': {
-              const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i) as string;
+              const binaryPropertyName = this.getNodeParameter('binaryPropertyName', i);
               const result = await handleEnvelopeDownloadDocument(this, i);
 
               returnData.push({

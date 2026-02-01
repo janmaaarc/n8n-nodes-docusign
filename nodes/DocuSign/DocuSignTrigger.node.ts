@@ -132,7 +132,6 @@ export class DocuSignTrigger implements INodeType {
         displayOptions: {
           show: {},
         },
-        // eslint-disable-next-line n8n-nodes-base/node-param-description-unneeded-backticks
         description: `To receive webhooks, configure DocuSign Connect:
 1. Go to DocuSign Admin > Integrations > Connect
 2. Create a new configuration
@@ -145,14 +144,14 @@ export class DocuSignTrigger implements INodeType {
   };
 
   async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
-    const req = this.getRequestObject();
-    const body = this.getBodyData() as IDataObject;
+    const req = this.getRequestObject() as { headers: Record<string, string | string[] | undefined> };
+    const body = this.getBodyData();
     const verifySignature = this.getNodeParameter('verifySignature', true) as boolean;
     const selectedEvents = this.getNodeParameter('events', []) as string[];
 
     // Verify webhook signature if enabled
     if (verifySignature) {
-      const signature = req.headers['x-docusign-signature-1'] as string;
+      const signature = req.headers['x-docusign-signature-1'] as string | undefined;
 
       if (!signature) {
         return {
