@@ -18,6 +18,7 @@ import {
   buildSignHereTab,
   buildTemplateRole,
   getBaseUrl,
+  verifyWebhookSignature,
 } from '../nodes/DocuSign/helpers';
 import {
   ENVELOPE_STATUSES,
@@ -489,5 +490,392 @@ describe('Node Description', () => {
     const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
     const node = new DocuSign();
     expect(node.description.properties.length).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================================
+// Webhook Signature Tests
+// ============================================================================
+
+describe('verifyWebhookSignature', () => {
+  it('should return true for valid signature', () => {
+    const payload = '{"event":"envelope-completed"}';
+    const secret = 'test-secret';
+    // Generate valid signature
+    const crypto = require('crypto');
+    const hmac = crypto.createHmac('sha256', secret);
+    const validSignature = hmac.update(payload).digest('base64');
+
+    expect(verifyWebhookSignature(payload, validSignature, secret)).toBe(true);
+  });
+
+  it('should return false for invalid signature', () => {
+    const payload = '{"event":"envelope-completed"}';
+    const secret = 'test-secret';
+    const invalidSignature = 'invalid-signature-base64';
+
+    expect(verifyWebhookSignature(payload, invalidSignature, secret)).toBe(false);
+  });
+
+  it('should return false for empty inputs', () => {
+    expect(verifyWebhookSignature('', 'sig', 'secret')).toBe(false);
+    expect(verifyWebhookSignature('payload', '', 'secret')).toBe(false);
+    expect(verifyWebhookSignature('payload', 'sig', '')).toBe(false);
+  });
+
+  it('should return false for mismatched secret', () => {
+    const payload = '{"event":"envelope-completed"}';
+    const secret1 = 'secret-one';
+    const secret2 = 'secret-two';
+    const crypto = require('crypto');
+    const hmac = crypto.createHmac('sha256', secret1);
+    const signature = hmac.update(payload).digest('base64');
+
+    expect(verifyWebhookSignature(payload, signature, secret2)).toBe(false);
+  });
+});
+
+// ============================================================================
+// DocuSign Trigger Node Tests
+// ============================================================================
+
+describe('DocuSign Trigger Node', () => {
+  it('should have correct node name and display name', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    expect(node.description.name).toBe('docuSignTrigger');
+    expect(node.description.displayName).toBe('DocuSign Trigger');
+  });
+
+  it('should be a trigger node', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    expect(node.description.group).toContain('trigger');
+  });
+
+  it('should have correct icon', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    expect(node.description.icon).toBe('file:docusign.svg');
+  });
+
+  it('should require docuSignApi credentials', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    expect(node.description.credentials).toHaveLength(1);
+    expect(node.description.credentials?.[0].name).toBe('docuSignApi');
+    expect(node.description.credentials?.[0].required).toBe(true);
+  });
+
+  it('should have webhook configuration', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    expect(node.description.webhooks).toHaveLength(1);
+    expect(node.description.webhooks?.[0].httpMethod).toBe('POST');
+    expect(node.description.webhooks?.[0].path).toBe('webhook');
+  });
+
+  it('should have events property', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    const eventsProperty = node.description.properties.find(p => p.name === 'events');
+    expect(eventsProperty).toBeDefined();
+    expect(eventsProperty?.type).toBe('multiOptions');
+  });
+
+  it('should have verifySignature property', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    const verifyProperty = node.description.properties.find(p => p.name === 'verifySignature');
+    expect(verifyProperty).toBeDefined();
+    expect(verifyProperty?.type).toBe('boolean');
+    expect(verifyProperty?.default).toBe(true);
+  });
+
+  it('should have replayProtection property', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    const replayProperty = node.description.properties.find(p => p.name === 'replayProtection');
+    expect(replayProperty).toBeDefined();
+    expect(replayProperty?.type).toBe('boolean');
+    expect(replayProperty?.default).toBe(true);
+  });
+
+  it('should support all envelope events', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    const eventsProperty = node.description.properties.find(p => p.name === 'events');
+    const options = eventsProperty?.options as Array<{ value: string }>;
+    const eventValues = options?.map(o => o.value) || [];
+
+    expect(eventValues).toContain('envelope-sent');
+    expect(eventValues).toContain('envelope-delivered');
+    expect(eventValues).toContain('envelope-completed');
+    expect(eventValues).toContain('envelope-declined');
+    expect(eventValues).toContain('envelope-voided');
+  });
+
+  it('should support all recipient events', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    const eventsProperty = node.description.properties.find(p => p.name === 'events');
+    const options = eventsProperty?.options as Array<{ value: string }>;
+    const eventValues = options?.map(o => o.value) || [];
+
+    expect(eventValues).toContain('recipient-sent');
+    expect(eventValues).toContain('recipient-delivered');
+    expect(eventValues).toContain('recipient-completed');
+    expect(eventValues).toContain('recipient-declined');
+    expect(eventValues).toContain('recipient-authenticationfailed');
+  });
+
+  it('should support template events', async () => {
+    const { DocuSignTrigger } = await import('../nodes/DocuSign/DocuSignTrigger.node');
+    const node = new DocuSignTrigger();
+    const eventsProperty = node.description.properties.find(p => p.name === 'events');
+    const options = eventsProperty?.options as Array<{ value: string }>;
+    const eventValues = options?.map(o => o.value) || [];
+
+    expect(eventValues).toContain('template-created');
+    expect(eventValues).toContain('template-modified');
+    expect(eventValues).toContain('template-deleted');
+  });
+});
+
+// ============================================================================
+// Additional Validation Edge Cases
+// ============================================================================
+
+describe('validateField edge cases', () => {
+  it('should validate base64 fields', () => {
+    expect(() => validateField('content', 'SGVsbG8=', 'base64')).not.toThrow();
+    expect(() => validateField('content', 'not valid!!!', 'base64')).toThrow('content must be valid base64-encoded content');
+  });
+
+  it('should validate url fields', () => {
+    expect(() => validateField('url', 'https://example.com', 'url')).not.toThrow();
+    expect(() => validateField('url', 'not-a-url', 'url')).toThrow('url must be a valid URL');
+  });
+
+  it('should validate httpsUrl fields', () => {
+    expect(() => validateField('url', 'https://example.com', 'httpsUrl')).not.toThrow();
+    expect(() => validateField('url', 'http://example.com', 'httpsUrl')).toThrow('url must be a valid HTTPS URL');
+  });
+
+  it('should validate date fields', () => {
+    expect(() => validateField('date', '2024-01-15', 'date')).not.toThrow();
+    expect(() => validateField('date', 'not-a-date', 'date')).toThrow('date must be a valid ISO 8601 date');
+  });
+
+  it('should skip validation for null values', () => {
+    expect(() => validateField('field', null, 'email')).not.toThrow();
+    expect(() => validateField('field', null, 'uuid')).not.toThrow();
+  });
+});
+
+// ============================================================================
+// Envelope Resource Tests
+// ============================================================================
+
+describe('Envelope Resource', () => {
+  it('should have all operations defined', async () => {
+    const { envelopeOperations } = await import('../nodes/DocuSign/resources/envelope');
+    const options = envelopeOperations.options as Array<{ value: string }>;
+    const operationValues = options.map(o => o.value);
+
+    expect(operationValues).toContain('create');
+    expect(operationValues).toContain('createFromTemplate');
+    expect(operationValues).toContain('get');
+    expect(operationValues).toContain('getAll');
+    expect(operationValues).toContain('send');
+    expect(operationValues).toContain('void');
+    expect(operationValues).toContain('downloadDocument');
+    expect(operationValues).toContain('resend');
+    expect(operationValues).toContain('getRecipients');
+    expect(operationValues).toContain('updateRecipients');
+    expect(operationValues).toContain('getAuditEvents');
+    expect(operationValues).toContain('delete');
+  });
+
+  it('should have delete operation', async () => {
+    const { envelopeOperations } = await import('../nodes/DocuSign/resources/envelope');
+    const options = envelopeOperations.options as Array<{ value: string; name: string }>;
+    const deleteOp = options.find(o => o.value === 'delete');
+
+    expect(deleteOp).toBeDefined();
+    expect(deleteOp?.name).toBe('Delete');
+  });
+
+  it('should have envelope fields defined', async () => {
+    const { envelopeFields } = await import('../nodes/DocuSign/resources/envelope');
+    expect(envelopeFields.length).toBeGreaterThan(0);
+
+    const fieldNames = envelopeFields.map(f => f.name);
+    expect(fieldNames).toContain('emailSubject');
+    expect(fieldNames).toContain('signerEmail');
+    expect(fieldNames).toContain('envelopeId');
+  });
+});
+
+// ============================================================================
+// Template Resource Tests
+// ============================================================================
+
+describe('Template Resource', () => {
+  it('should have all operations defined', async () => {
+    const { templateOperations } = await import('../nodes/DocuSign/resources/template');
+    const options = templateOperations.options as Array<{ value: string }>;
+    const operationValues = options.map(o => o.value);
+
+    expect(operationValues).toContain('get');
+    expect(operationValues).toContain('getAll');
+  });
+
+  it('should have template fields defined', async () => {
+    const { templateFields } = await import('../nodes/DocuSign/resources/template');
+    expect(templateFields.length).toBeGreaterThan(0);
+
+    const fieldNames = templateFields.map(f => f.name);
+    expect(fieldNames).toContain('templateId');
+    expect(fieldNames).toContain('returnAll');
+    expect(fieldNames).toContain('limit');
+  });
+});
+
+// ============================================================================
+// Resource Index Tests
+// ============================================================================
+
+describe('Resource Index', () => {
+  it('should export resourceProperty', async () => {
+    const { resourceProperty } = await import('../nodes/DocuSign/resources');
+    expect(resourceProperty).toBeDefined();
+    expect(resourceProperty.name).toBe('resource');
+  });
+
+  it('should export allOperations', async () => {
+    const { allOperations } = await import('../nodes/DocuSign/resources');
+    expect(allOperations).toBeDefined();
+    expect(allOperations.length).toBe(2);
+  });
+
+  it('should export allFields', async () => {
+    const { allFields } = await import('../nodes/DocuSign/resources');
+    expect(allFields).toBeDefined();
+    expect(allFields.length).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================================
+// Constants Additional Tests
+// ============================================================================
+
+describe('Constants Additional', () => {
+  it('should have REGION_URLS defined', async () => {
+    const { REGION_URLS } = await import('../nodes/DocuSign/constants');
+    expect(REGION_URLS).toBeDefined();
+    expect(REGION_URLS.na).toBe('https://na1.docusign.net/restapi/v2.1');
+    expect(REGION_URLS.eu).toBe('https://eu.docusign.net/restapi/v2.1');
+    expect(REGION_URLS.au).toBe('https://au.docusign.net/restapi/v2.1');
+    expect(REGION_URLS.ca).toBe('https://ca.docusign.net/restapi/v2.1');
+  });
+
+  it('should have DEFAULT_PAGE_SIZE defined', async () => {
+    const { DEFAULT_PAGE_SIZE } = await import('../nodes/DocuSign/constants');
+    expect(DEFAULT_PAGE_SIZE).toBe(100);
+  });
+
+  it('should have DEFAULT_REQUEST_TIMEOUT_MS defined', async () => {
+    const { DEFAULT_REQUEST_TIMEOUT_MS } = await import('../nodes/DocuSign/constants');
+    expect(DEFAULT_REQUEST_TIMEOUT_MS).toBe(30000);
+  });
+
+  it('should have TAB_TYPES defined', async () => {
+    const { TAB_TYPES } = await import('../nodes/DocuSign/constants');
+    expect(TAB_TYPES).toBeDefined();
+    expect(TAB_TYPES.length).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================================
+// URL Validation Edge Cases
+// ============================================================================
+
+describe('URL Validation Edge Cases', () => {
+  it('should block 172.16-31.x.x ranges', () => {
+    expect(isValidUrl('http://172.16.0.1')).toBe(false);
+    expect(isValidUrl('http://172.20.0.1')).toBe(false);
+    expect(isValidUrl('http://172.31.0.1')).toBe(false);
+  });
+
+  it('should block IPv6 localhost', () => {
+    expect(isValidUrl('http://[::1]')).toBe(false);
+  });
+
+  it('should block 0.0.0.0', () => {
+    expect(isValidUrl('http://0.0.0.0')).toBe(false);
+  });
+
+  it('should allow valid external domains', () => {
+    expect(isValidUrl('https://api.docusign.com')).toBe(true);
+    expect(isValidUrl('https://subdomain.example.com/path')).toBe(true);
+  });
+
+  it('should handle malformed URLs', () => {
+    expect(isValidUrl('not-a-url')).toBe(false);
+    expect(isValidUrl('')).toBe(false);
+  });
+});
+
+// ============================================================================
+// Rate Limit Additional Tests
+// ============================================================================
+
+describe('Rate Limit Additional Tests', () => {
+  it('should return false for null/undefined errors', () => {
+    expect(isRateLimitError(null)).toBe(false);
+    expect(isRateLimitError(undefined)).toBe(false);
+  });
+
+  it('should return false for non-object errors', () => {
+    expect(isRateLimitError('error string')).toBe(false);
+    expect(isRateLimitError(123)).toBe(false);
+  });
+
+  it('should handle retryable errors with response object', () => {
+    expect(isRetryableError({ response: { statusCode: 500 } })).toBe(true);
+    expect(isRetryableError({ response: { statusCode: 503 } })).toBe(true);
+  });
+
+  it('should return false for retryable check on non-object', () => {
+    expect(isRetryableError(null)).toBe(false);
+    expect(isRetryableError('error')).toBe(false);
+  });
+
+  it('should handle x-ratelimit-reset header', () => {
+    const futureTime = Math.floor(Date.now() / 1000) + 60;
+    const result = getRetryAfterSeconds({
+      response: { headers: { 'x-ratelimit-reset': String(futureTime) } }
+    });
+    expect(result).toBeGreaterThan(0);
+    expect(result).toBeLessThanOrEqual(60);
+  });
+
+  it('should return undefined for past reset time', () => {
+    const pastTime = Math.floor(Date.now() / 1000) - 60;
+    const result = getRetryAfterSeconds({
+      response: { headers: { 'x-ratelimit-reset': String(pastTime) } }
+    });
+    expect(result).toBe(undefined);
+  });
+
+  it('should return undefined for invalid retry-after values', () => {
+    expect(getRetryAfterSeconds({
+      response: { headers: { 'retry-after': 'invalid' } }
+    })).toBe(undefined);
+
+    expect(getRetryAfterSeconds({
+      response: { headers: { 'retry-after': '-5' } }
+    })).toBe(undefined);
   });
 });

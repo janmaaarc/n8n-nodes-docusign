@@ -81,6 +81,12 @@ export const envelopeOperations: INodeProperties = {
       action: 'Update recipients',
       description: 'Update recipient email or name for an envelope',
     },
+    {
+      name: 'Delete',
+      value: 'delete',
+      action: 'Delete an envelope',
+      description: 'Delete a draft envelope (only works for drafts)',
+    },
   ],
   default: 'create',
 };
@@ -422,7 +428,7 @@ export const envelopeFields: INodeProperties[] = [
     displayOptions: {
       show: {
         resource: ['envelope'],
-        operation: ['get', 'send', 'void', 'downloadDocument', 'resend', 'getRecipients', 'updateRecipients', 'getAuditEvents'],
+        operation: ['get', 'send', 'void', 'downloadDocument', 'resend', 'getRecipients', 'updateRecipients', 'getAuditEvents', 'delete'],
       },
     },
     default: '',

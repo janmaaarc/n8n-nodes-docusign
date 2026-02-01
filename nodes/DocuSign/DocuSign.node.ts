@@ -449,6 +449,27 @@ async function handleEnvelopeGetAuditEvents(
   return await docuSignApiRequest.call(ctx, 'GET', `/envelopes/${envelopeId}/audit_events`);
 }
 
+/**
+ * Handles deleting a draft envelope.
+ * Only works for envelopes with status "created" (draft).
+ */
+async function handleEnvelopeDelete(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const envelopeId = ctx.getNodeParameter('envelopeId', itemIndex) as string;
+
+  validateField('Envelope ID', envelopeId, 'uuid');
+
+  // DocuSign uses PUT with status "deleted" to delete draft envelopes
+  return await docuSignApiRequest.call(
+    ctx,
+    'PUT',
+    `/envelopes/${envelopeId}`,
+    { status: 'deleted' },
+  );
+}
+
 // ============================================================================
 // Template Handlers
 // ============================================================================
@@ -603,6 +624,10 @@ export class DocuSign implements INodeType {
 
             case 'getAuditEvents':
               responseData = await handleEnvelopeGetAuditEvents(this, i);
+              break;
+
+            case 'delete':
+              responseData = await handleEnvelopeDelete(this, i);
               break;
 
             default:

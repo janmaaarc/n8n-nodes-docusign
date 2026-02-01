@@ -69,7 +69,7 @@ The main node for interacting with the DocuSign eSignature API.
 
 | Resource | Operations |
 |----------|------------|
-| **Envelope** | Create, Create From Template, Get, Get Many, Send, Resend, Void, Download Document, Get Recipients, Update Recipients, Get Audit Events |
+| **Envelope** | Create, Create From Template, Get, Get Many, Send, Resend, Void, Delete, Download Document, Get Recipients, Update Recipients, Get Audit Events |
 | **Template** | Get, Get Many |
 
 ### DocuSign Trigger
@@ -153,8 +153,9 @@ Track pending envelopes and update a dashboard.
 The webhook trigger includes built-in security features:
 
 - **HMAC-SHA256 Signature Verification** - All webhooks verified using signatures
+- **Replay Attack Protection** - Rejects webhook requests older than 5 minutes
 - **Timing-Safe Comparison** - Prevents timing attacks
-- **Configurable Verification** - Enable/disable in trigger settings
+- **Configurable Verification** - Enable/disable signature and replay protection in trigger settings
 
 ### Input Validation
 
@@ -274,6 +275,13 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/community-nodes/)
 
 ## Changelog
+
+### v0.1.0
+
+**New Features:**
+- Replay attack protection for webhooks (rejects requests older than 5 minutes)
+- Delete operation for draft envelopes
+- CI/CD pipeline with GitHub Actions
 
 ### v0.0.4
 

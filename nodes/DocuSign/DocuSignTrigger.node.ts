@@ -125,6 +125,14 @@ export class DocuSignTrigger implements INodeType {
           'Whether to verify the webhook signature using the secret from credentials. Recommended for security.',
       },
       {
+        displayName: 'Replay Protection',
+        name: 'replayProtection',
+        type: 'boolean',
+        default: true,
+        description:
+          'Whether to reject webhook requests older than 5 minutes. Prevents replay attacks.',
+      },
+      {
         displayName: 'Setup Instructions',
         name: 'setupNotice',
         type: 'notice',
@@ -148,6 +156,8 @@ export class DocuSignTrigger implements INodeType {
     const body = this.getBodyData();
     const verifySignature = this.getNodeParameter('verifySignature', true) as boolean;
     const selectedEvents = this.getNodeParameter('events', []) as string[];
+
+    const replayProtection = this.getNodeParameter('replayProtection', true) as boolean;
 
     // Verify webhook signature if enabled
     if (verifySignature) {
@@ -196,6 +206,36 @@ export class DocuSignTrigger implements INodeType {
       }
     }
 
+    // Replay attack protection - reject requests older than 5 minutes
+    if (replayProtection) {
+      const MAX_AGE_MS = 5 * 60 * 1000; // 5 minutes
+      const envelopeData = body.data as IDataObject || {};
+      const envelopeSummary = (envelopeData.envelopeSummary || envelopeData) as IDataObject;
+
+      // Check for timestamp in various locations DocuSign might send it
+      const timestampStr = (
+        envelopeSummary.generatedDateTime ||
+        envelopeSummary.statusChangedDateTime ||
+        envelopeSummary.sentDateTime ||
+        body.generatedDateTime
+      ) as string | undefined;
+
+      if (timestampStr) {
+        const webhookTime = new Date(timestampStr).getTime();
+        const now = Date.now();
+        const age = now - webhookTime;
+
+        if (age > MAX_AGE_MS) {
+          return {
+            webhookResponse: {
+              status: 401,
+              body: { error: 'Request expired (replay attack protection)' },
+            },
+          };
+        }
+      }
+    }
+
     // Extract event type from the payload
     const eventType = (body.event as string) || '';
 
@@ -210,24 +250,24 @@ export class DocuSignTrigger implements INodeType {
       };
     }
 
-    // Extract envelope data
-    const envelopeData = body.data as IDataObject || {};
-    const envelopeSummary = (envelopeData.envelopeSummary || envelopeData) as IDataObject;
+    // Extract envelope data (reuse from replay protection if already extracted)
+    const finalEnvelopeData = body.data as IDataObject || {};
+    const finalEnvelopeSummary = (finalEnvelopeData.envelopeSummary || finalEnvelopeData) as IDataObject;
 
     // Extract sender info with proper typing
-    const sender = envelopeSummary.sender as IDataObject | undefined;
+    const sender = finalEnvelopeSummary.sender as IDataObject | undefined;
 
     // Build output
     const output: IDataObject = {
       event: eventType,
       timestamp: new Date().toISOString(),
-      envelopeId: envelopeSummary.envelopeId || body.envelopeId,
-      status: envelopeSummary.status || body.status,
-      emailSubject: envelopeSummary.emailSubject || body.emailSubject,
+      envelopeId: finalEnvelopeSummary.envelopeId || body.envelopeId,
+      status: finalEnvelopeSummary.status || body.status,
+      emailSubject: finalEnvelopeSummary.emailSubject || body.emailSubject,
       senderEmail: sender?.email,
       senderName: sender?.userName,
-      recipients: envelopeSummary.recipients,
-      documents: envelopeSummary.documents,
+      recipients: finalEnvelopeSummary.recipients,
+      documents: finalEnvelopeSummary.documents,
       rawPayload: body,
     };
 
