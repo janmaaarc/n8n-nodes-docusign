@@ -82,7 +82,7 @@ This node implements several security measures:
 
 ## Security Changelog
 
-### v0.0.3
+### v0.0.4
 - Initial release with comprehensive security features
 - JWT token caching with automatic refresh
 - HMAC-SHA256 webhook signature verification

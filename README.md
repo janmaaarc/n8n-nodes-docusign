@@ -1,6 +1,6 @@
-# n8n-nodes-docusign
+# n8n-docusign-node
 
-[![npm version](https://img.shields.io/npm/v/n8n-nodes-docusign.svg)](https://www.npmjs.com/package/n8n-nodes-docusign)
+[![npm version](https://img.shields.io/npm/v/n8n-docusign-node.svg)](https://www.npmjs.com/package/n8n-docusign-node)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![n8n-community](https://img.shields.io/badge/n8n-community%20node-orange)](https://docs.n8n.io/integrations/community-nodes/)
 
@@ -25,13 +25,13 @@ An [n8n](https://n8n.io/) community node for [DocuSign](https://www.docusign.com
 
 1. Go to **Settings** > **Community Nodes** in your n8n instance
 2. Select **Install**
-3. Enter `n8n-nodes-docusign`
+3. Enter `n8n-docusign-node`
 4. Click **Install**
 
 ### npm
 
 ```bash
-npm install n8n-nodes-docusign
+npm install n8n-docusign-node
 ```
 
 ## Credentials
@@ -274,7 +274,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## Changelog
 
-### v0.0.3
+### v0.0.4
 
 **Initial Release:**
 - Full envelope management (create, send, void, download, recipients, audit)

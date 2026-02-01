@@ -1,4 +1,4 @@
-# Contributing to n8n-nodes-docusign
+# Contributing to n8n-docusign-node
 
 Thank you for your interest in contributing! This document provides guidelines and instructions for contributing.
 
@@ -14,8 +14,8 @@ Thank you for your interest in contributing! This document provides guidelines a
 
 1. Fork and clone the repository:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/n8n-nodes-docusign.git
-   cd n8n-nodes-docusign
+   git clone https://github.com/YOUR_USERNAME/n8n-docusign-node.git
+   cd n8n-docusign-node
    ```
 
 2. Install dependencies:
@@ -38,7 +38,7 @@ Thank you for your interest in contributing! This document provides guidelines a
 ### Project Structure
 
 ```
-n8n-nodes-docusign/
+n8n-docusign-node/
 ├── credentials/           # Credential definitions
 │   └── DocuSignApi.credentials.ts
 ├── nodes/DocuSign/        # Node implementations
@@ -182,5 +182,5 @@ By contributing, you agree that your contributions will be licensed under the MI
 
 ## Questions?
 
-- Open a [GitHub Issue](https://github.com/janmaaarc/n8n-nodes-docusign/issues)
+- Open a [GitHub Issue](https://github.com/janmaaarc/n8n-docusign-node/issues)
 - Check existing issues and discussions
