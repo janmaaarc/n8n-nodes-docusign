@@ -2,8 +2,8 @@
 
 [![npm version](https://img.shields.io/npm/v/n8n-docusign-node.svg)](https://www.npmjs.com/package/n8n-docusign-node)
 [![n8n-community](https://img.shields.io/badge/n8n-community%20node-orange)](https://docs.n8n.io/integrations/community-nodes/)
-[![CI](https://github.com/janmaaarc/n8n-docusign-node/actions/workflows/ci.yml/badge.svg)](https://github.com/janmaaarc/n8n-docusign-node/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI](https://github.com/janmaaarc/n8n-docusign-node/actions/workflows/ci.yml/badge.svg)](https://github.com/janmaaarc/n8n-docusign-node/actions/workflows/ci.yml)
 
 An [n8n](https://n8n.io/) community node for [DocuSign](https://www.docusign.com/) - the world's leading eSignature platform for sending documents for signature and managing envelopes.
 
