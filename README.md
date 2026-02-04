@@ -12,6 +12,7 @@ An [n8n](https://n8n.io/) community node for [DocuSign](https://www.docusign.com
 - **Full Envelope Management** - Create, send, void, delete, and download documents
 - **Embedded Signing** - Generate signing URLs for iframe integration in your app
 - **Multiple Signers & Documents** - Support for multiple signers with routing order and multiple documents per envelope
+- **Merge Fields** - Populate document placeholders like `{{FirstName}}` with dynamic values
 - **Advanced Tab Types** - Signature, initials, date, text fields, checkboxes, and more
 - **Custom Fields** - Add metadata fields to envelopes for tracking and reporting
 - **Template Support** - Create envelopes from pre-configured templates
@@ -94,6 +95,7 @@ The main node for interacting with the DocuSign eSignature API.
 | **Multiple Signers** | Add additional signers with routing order |
 | **Multiple Documents** | Attach multiple documents to one envelope |
 | **Embedded Signing** | Enable for iframe integration (adds clientUserId) |
+| **Merge Fields** | Populate placeholders like `{{FirstName}}` with dynamic values |
 | **Custom Fields** | Add metadata fields for tracking |
 | **Additional Tabs** | Initial, date, text, checkbox, company, title fields |
 | **Anchor Tags** | Position signature fields using text anchors |
@@ -160,7 +162,15 @@ Form Trigger > DocuSign (Create Envelope, Embedded=true) > DocuSign (Create Sign
 
 Generate signing URLs for embedding DocuSign in your application.
 
-### 6. Envelope Status Dashboard
+### 6. Dynamic Document with Merge Fields
+
+```
+Form Trigger > DocuSign (Create Envelope with Merge Fields) > Notify User
+```
+
+Populate document placeholders like `{{FirstName}}`, `{{Company}}`, `{{Date}}` with form data. Put placeholders in your PDF, then map them in the Merge Fields section.
+
+### 7. Envelope Status Dashboard
 
 ```
 Schedule Trigger > DocuSign (Get Many, status=sent) > Google Sheets (Update)
@@ -309,6 +319,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/community-nodes/)
 
 ## Changelog
+
+### v0.3.0
+
+**New Features:**
+- **Merge Fields** - Simple UI for populating document placeholders with dynamic values
+  - Add placeholder/value pairs like `{{FirstName}}` → `John`
+  - Configurable font size (Size 7-72)
+  - Automatically converts to anchored text tabs
 
 ### v0.2.0
 

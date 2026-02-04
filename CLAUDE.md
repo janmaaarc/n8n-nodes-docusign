@@ -136,6 +136,21 @@ envelope.customFields = {
 };
 ```
 
+### Merge Fields (Dynamic Document Population)
+
+```typescript
+// Merge fields automatically convert to text tabs with anchor strings
+// Put placeholders like {{FirstName}} in your document, then map them:
+const mergeFields = {
+  fields: [
+    { placeholder: '{{FirstName}}', value: 'John', fontSize: 'Size12' },
+    { placeholder: '{{Company}}', value: 'Acme Inc', fontSize: 'Size12' },
+    { placeholder: '{{Date}}', value: '2025-02-05', fontSize: 'Size10' },
+  ],
+};
+// These are automatically converted to textTabs with anchorString
+```
+
 ## Available Commands
 
 ```bash

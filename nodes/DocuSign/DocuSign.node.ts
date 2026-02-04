@@ -124,6 +124,35 @@ async function handleEnvelopeCreate(
     }
   }
 
+  // Add merge fields (converted to textTabs with anchor strings)
+  const mergeFieldsData = additionalOptions.mergeFields as IDataObject | undefined;
+  if (mergeFieldsData?.fields) {
+    const fieldsList = mergeFieldsData.fields as IDataObject[];
+    if (!signerTabs.textTabs) {
+      signerTabs.textTabs = [];
+    }
+
+    for (const field of fieldsList) {
+      const placeholder = field.placeholder as string;
+      const value = field.value as string;
+      const fontSize = (field.fontSize as string) || 'Size12';
+
+      if (placeholder && value !== undefined) {
+        const textTab: IDataObject = {
+          anchorString: placeholder,
+          anchorUnits: 'pixels',
+          anchorXOffset: '0',
+          anchorYOffset: '0',
+          value,
+          fontSize,
+          locked: 'true',
+          tabLabel: `merge_${placeholder}`,
+        };
+        (signerTabs.textTabs as IDataObject[]).push(textTab);
+      }
+    }
+  }
+
   signer.tabs = signerTabs;
 
   // Build primary document with proper file extension extraction

@@ -1458,3 +1458,66 @@ describe('DocuSign Node Delete Handler', () => {
     expect(() => validateField('Envelope ID', '', 'required')).toThrow('Envelope ID is required');
   });
 });
+
+// ============================================================================
+// Merge Fields Tests
+// ============================================================================
+
+describe('Merge Fields Feature', () => {
+  it('should have merge fields option in envelope create additionalOptions', async () => {
+    const { envelopeFields } = await import('../nodes/DocuSign/resources/envelope');
+
+    const additionalOptions = envelopeFields.find(f => f.name === 'additionalOptions');
+    expect(additionalOptions).toBeDefined();
+
+    const options = additionalOptions?.options as Array<{ name: string }>;
+    const mergeFieldsOption = options?.find(o => o.name === 'mergeFields');
+    expect(mergeFieldsOption).toBeDefined();
+  });
+
+  it('should have correct merge fields structure', async () => {
+    const { envelopeFields } = await import('../nodes/DocuSign/resources/envelope');
+
+    const additionalOptions = envelopeFields.find(f => f.name === 'additionalOptions');
+    const options = additionalOptions?.options as Array<{ name: string; type?: string; options?: unknown[] }>;
+    const mergeFieldsOption = options?.find(o => o.name === 'mergeFields');
+
+    expect(mergeFieldsOption?.type).toBe('fixedCollection');
+
+    // Check that merge fields has the fields array with placeholder and value
+    const innerOptions = (mergeFieldsOption as { options?: Array<{ name: string; values?: Array<{ name: string }> }> })?.options;
+    const fieldsOption = innerOptions?.find(o => o.name === 'fields');
+    expect(fieldsOption).toBeDefined();
+
+    const values = fieldsOption?.values;
+    const placeholderField = values?.find(v => v.name === 'placeholder');
+    const valueField = values?.find(v => v.name === 'value');
+    const fontSizeField = values?.find(v => v.name === 'fontSize');
+
+    expect(placeholderField).toBeDefined();
+    expect(valueField).toBeDefined();
+    expect(fontSizeField).toBeDefined();
+  });
+
+  it('should have font size options', async () => {
+    const { envelopeFields } = await import('../nodes/DocuSign/resources/envelope');
+
+    const additionalOptions = envelopeFields.find(f => f.name === 'additionalOptions');
+    const options = additionalOptions?.options as Array<{ name: string; options?: unknown[] }>;
+    const mergeFieldsOption = options?.find(o => o.name === 'mergeFields');
+
+    const innerOptions = (mergeFieldsOption as { options?: Array<{ name: string; values?: Array<{ name: string; options?: Array<{ value: string }> }> }> })?.options;
+    const fieldsOption = innerOptions?.find(o => o.name === 'fields');
+    const values = fieldsOption?.values;
+    const fontSizeField = values?.find(v => v.name === 'fontSize');
+
+    const fontOptions = (fontSizeField as { options?: Array<{ value: string }> })?.options;
+    expect(fontOptions).toBeDefined();
+    expect(fontOptions?.length).toBeGreaterThan(0);
+
+    const fontValues = fontOptions?.map(o => o.value);
+    expect(fontValues).toContain('Size12');
+    expect(fontValues).toContain('Size14');
+    expect(fontValues).toContain('Size7');
+  });
+});

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-02-05
+
+### Added
+- **Merge Fields** - Simple UI for populating document placeholders with dynamic values
+  - Put placeholders like `{{FirstName}}` in your document
+  - Map placeholders to values in the Merge Fields section
+  - Configurable font size (Size 7-72)
+  - Automatically converts to anchored text tabs behind the scenes
+
+---
+
 ## [0.2.0] - 2025-02-02
 
 ### Added
