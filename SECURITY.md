@@ -4,6 +4,7 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 0.5.x   | :white_check_mark: |
 | 0.4.x   | :white_check_mark: |
 | 0.3.x   | :white_check_mark: |
 | 0.2.x   | :white_check_mark: |
@@ -87,6 +88,11 @@ This node implements several security measures:
    - Use production only for live workflows
 
 ## Security Changelog
+
+### v0.5.0
+- Replaced restricted global `setTimeout` with `node:timers/promises` for n8n linter compliance
+- Removed deprecated validation functions (`validateRequired`, `validateEmail`)
+- Maintained all existing security features
 
 ### v0.4.1
 - No security-related changes (maintenance release)

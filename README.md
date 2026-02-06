@@ -183,6 +183,104 @@ Schedule Trigger > DocuSign (Get Many, status=sent) > Google Sheets (Update)
 
 Track pending envelopes and update a dashboard.
 
+### Importable Workflow: Send Document for Signature
+
+Copy and import this JSON into n8n via **Workflows > Import from URL/File**:
+
+```json
+{
+  "name": "Send Document for Signature",
+  "nodes": [
+    {
+      "parameters": {},
+      "name": "Start",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "resource": "envelope",
+        "operation": "create",
+        "emailSubject": "Please sign this document",
+        "signerEmail": "={{$json.signerEmail}}",
+        "signerName": "={{$json.signerName}}",
+        "document": "={{$json.documentBase64}}",
+        "documentName": "contract.pdf",
+        "sendImmediately": true
+      },
+      "name": "DocuSign",
+      "type": "n8n-nodes-docusign-esign.docuSign",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "docuSignApi": {
+          "id": "1",
+          "name": "DocuSign API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Start": {
+      "main": [[{ "node": "DocuSign", "type": "main", "index": 0 }]]
+    }
+  }
+}
+```
+
+### Importable Workflow: Auto-Save Signed Documents
+
+```json
+{
+  "name": "Auto-Save Signed Documents",
+  "nodes": [
+    {
+      "parameters": {
+        "events": ["envelope-completed"],
+        "verifySignature": true,
+        "replayProtection": true
+      },
+      "name": "DocuSign Trigger",
+      "type": "n8n-nodes-docusign-esign.docuSignTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "webhookId": "docusign-webhook",
+      "credentials": {
+        "docuSignApi": {
+          "id": "1",
+          "name": "DocuSign API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "envelope",
+        "operation": "downloadDocument",
+        "envelopeId": "={{$json.envelopeId}}",
+        "documentId": "combined",
+        "binaryPropertyName": "data"
+      },
+      "name": "Download Document",
+      "type": "n8n-nodes-docusign-esign.docuSign",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "credentials": {
+        "docuSignApi": {
+          "id": "1",
+          "name": "DocuSign API"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "DocuSign Trigger": {
+      "main": [[{ "node": "Download Document", "type": "main", "index": 0 }]]
+    }
+  }
+}
+```
+
 ## Filtering
 
 "Get Many" operations support filtering:
@@ -324,6 +422,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/community-nodes/)
 
 ## Changelog
+
+### v0.5.0
+
+**Quality & Verification:**
+- Test coverage to 92.91% (171 tests), DocuSign.node.ts at 97.79%
+- n8n linter compliance (fixed restricted `setTimeout` global)
+- Removed deprecated `validateRequired`/`validateEmail` functions
+- Added importable JSON workflow examples to README
 
 ### v0.4.1
 

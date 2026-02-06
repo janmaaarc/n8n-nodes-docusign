@@ -18,6 +18,7 @@ import type {
 } from 'n8n-workflow';
 import { NodeApiError } from 'n8n-workflow';
 import * as crypto from 'crypto';
+import { setTimeout as delay } from 'node:timers/promises';
 import {
   API_BASE_URL_PRODUCTION,
   API_BASE_URL_DEMO,
@@ -219,22 +220,6 @@ export function validateField(
 }
 
 /**
- * Validates that a string is not empty.
- * @deprecated Use validateField(fieldName, value, 'required') instead
- */
-export function validateRequired(value: string | undefined, fieldName: string): void {
-  validateField(fieldName, value, 'required');
-}
-
-/**
- * Validates email field.
- * @deprecated Use validateField(fieldName, value, 'email') instead
- */
-export function validateEmail(email: string, fieldName: string): void {
-  validateField(fieldName, email, 'email');
-}
-
-/**
  * Extracts file extension from filename, with proper fallback.
  *
  * @param filename - The filename to extract extension from
@@ -329,14 +314,6 @@ export function getRetryAfterSeconds(error: unknown): number | undefined {
   return undefined;
 }
 
-/**
- * Sleeps for the specified number of milliseconds.
- *
- * @param ms - Milliseconds to sleep
- */
-async function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 // ============================================================================
 // API Request Helpers
@@ -546,15 +523,15 @@ export async function docuSignApiRequest(
       if (isRateLimitError(error)) {
         const retryAfter = getRetryAfterSeconds(error) || 60;
         if (attempt < MAX_RETRIES) {
-          await sleep(retryAfter * 1000);
+          await delay(retryAfter * 1000);
           continue;
         }
       }
 
       // Handle retryable errors with exponential backoff
       if (isRetryableError(error) && attempt < MAX_RETRIES) {
-        const delay = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
-        await sleep(delay);
+        const backoff = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+        await delay(backoff);
         continue;
       }
 

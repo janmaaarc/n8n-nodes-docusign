@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-02-06
+
+### Added
+- **Importable Example Workflows** - JSON workflow examples in README for easy import into n8n
+- **n8n Linter Compliance** - Fixed restricted global `setTimeout` usage for n8n Cloud verification
+
+### Changed
+- **Test Coverage to 92.91%** - Added 31 new tests (171 total), DocuSign.node.ts now at 97.79%
+- **Removed Deprecated Functions** - Removed `validateRequired` and `validateEmail` (use `validateField` instead)
+
+---
+
 ## [0.4.1] - 2025-02-05
 
 ### Changed

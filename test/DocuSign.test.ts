@@ -6,8 +6,6 @@ import {
   isValidUrl,
   isValidIsoDate,
   validateField,
-  validateRequired,
-  validateEmail,
   getFileExtension,
   isRateLimitError,
   isRetryableError,
@@ -190,31 +188,6 @@ describe('Validation Helpers', () => {
     });
   });
 
-  describe('validateRequired (deprecated)', () => {
-    it('should pass for non-empty strings', () => {
-      expect(() => validateRequired('hello', 'field')).not.toThrow();
-    });
-
-    it('should throw for empty strings', () => {
-      expect(() => validateRequired('', 'field')).toThrow('field is required');
-    });
-
-    it('should throw for undefined', () => {
-      expect(() => validateRequired(undefined, 'field')).toThrow('field is required');
-    });
-  });
-
-  describe('validateEmail (deprecated)', () => {
-    it('should pass for valid emails', () => {
-      expect(() => validateEmail('user@example.com', 'email')).not.toThrow();
-    });
-
-    it('should throw for invalid emails', () => {
-      expect(() => validateEmail('invalid', 'email')).toThrow(
-        'email must be a valid email address',
-      );
-    });
-  });
 });
 
 // ============================================================================
@@ -1698,5 +1671,847 @@ describe('Merge Fields Edge Cases', () => {
     expect(fontValues).toContain('Size24');
     expect(fontValues).toContain('Size36');
     expect(fontValues).toContain('Size48');
+  });
+});
+
+// ============================================================================
+// DocuSign Node Execute Tests (Handler Coverage)
+// ============================================================================
+
+describe('DocuSign Node Execute', () => {
+  const VALID_UUID = '12345678-1234-1234-1234-123456789abc';
+
+  /**
+   * Creates a mock IExecuteFunctions context for testing the execute method.
+   */
+  const createExecuteContext = (overrides: {
+    resource?: string;
+    operation?: string;
+    params?: Record<string, unknown>;
+    items?: Array<{ json: Record<string, unknown>; binary?: Record<string, { data: string }> }>;
+    apiResponse?: unknown;
+    apiResponses?: unknown[];
+    shouldFail?: boolean;
+    httpError?: Error;
+  } = {}) => {
+    const resource = overrides.resource || 'envelope';
+    const operation = overrides.operation || 'get';
+    const params = overrides.params || {};
+    const items = overrides.items || [{ json: {} }];
+    const apiResponse = overrides.apiResponse || { envelopeId: VALID_UUID, status: 'sent' };
+    let callCount = 0;
+
+    return {
+      getInputData: () => items,
+      getNodeParameter: (name: string, _index: number, defaultValue?: unknown) => {
+        const paramMap: Record<string, unknown> = {
+          resource,
+          operation,
+          envelopeId: VALID_UUID,
+          templateId: VALID_UUID,
+          ...params,
+        };
+        return paramMap[name] ?? defaultValue;
+      },
+      getCredentials: async () => ({
+        environment: 'demo',
+        accountId: 'test-account-id',
+        region: 'na',
+      }),
+      helpers: {
+        httpRequestWithAuthentication: async () => {
+          if (overrides.httpError) {
+            throw overrides.httpError;
+          }
+          if (overrides.apiResponses) {
+            return overrides.apiResponses[callCount++] || apiResponse;
+          }
+          return apiResponse;
+        },
+        returnJsonArray: (data: unknown) => {
+          if (Array.isArray(data)) {
+            return data.map((item: unknown) => ({ json: item }));
+          }
+          return [{ json: data }];
+        },
+        constructExecutionMetaData: (items: unknown[]) => items,
+        prepareBinaryData: async (buffer: Buffer, fileName: string, mimeType: string) => ({
+          data: buffer.toString('base64'),
+          fileName,
+          mimeType,
+        }),
+      },
+      getNode: () => ({ name: 'DocuSign' }),
+      continueOnFail: () => overrides.shouldFail === true,
+    };
+  };
+
+  describe('Envelope: get', () => {
+    it('should get an envelope by ID', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'get',
+        params: { envelopeId: VALID_UUID },
+        apiResponse: { envelopeId: VALID_UUID, status: 'completed' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+      expect(result[0][0].json.envelopeId).toBe(VALID_UUID);
+    });
+  });
+
+  describe('Envelope: getAll', () => {
+    it('should get all envelopes with limit', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'getAll',
+        params: {
+          returnAll: false,
+          limit: 10,
+          filters: {},
+        },
+        apiResponse: {
+          envelopes: [
+            { envelopeId: 'env-1', status: 'sent' },
+            { envelopeId: 'env-2', status: 'completed' },
+          ],
+        },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(2);
+    });
+
+    it('should get all envelopes with returnAll', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'getAll',
+        params: {
+          returnAll: true,
+          filters: { status: 'completed' },
+        },
+        apiResponse: {
+          envelopes: [{ envelopeId: 'env-1' }],
+          totalSetSize: '1',
+          endPosition: '0',
+        },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0].length).toBeGreaterThan(0);
+    });
+
+    it('should handle filters on getAll', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'getAll',
+        params: {
+          returnAll: false,
+          limit: 5,
+          filters: {
+            status: 'sent',
+            fromDate: '2024-01-01',
+            toDate: '2024-12-31',
+            searchText: 'contract',
+          },
+        },
+        apiResponse: { envelopes: [] },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(0);
+    });
+  });
+
+  describe('Envelope: send', () => {
+    it('should send a draft envelope', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'send',
+        params: { envelopeId: VALID_UUID },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.status).toBe('sent');
+    });
+  });
+
+  describe('Envelope: void', () => {
+    it('should void an envelope with reason', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'void',
+        params: {
+          envelopeId: VALID_UUID,
+          voidReason: 'No longer needed',
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'voided' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.status).toBe('voided');
+    });
+  });
+
+  describe('Envelope: delete', () => {
+    it('should delete a draft envelope', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'delete',
+        params: { envelopeId: VALID_UUID },
+        apiResponse: { envelopeId: VALID_UUID, status: 'deleted' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.status).toBe('deleted');
+    });
+  });
+
+  describe('Envelope: resend', () => {
+    it('should resend an envelope', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'resend',
+        params: {
+          envelopeId: VALID_UUID,
+          resendReason: 'Recipient did not receive',
+        },
+        apiResponse: { envelopeId: VALID_UUID },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+  });
+
+  describe('Envelope: getRecipients', () => {
+    it('should get recipients for an envelope', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'getRecipients',
+        params: { envelopeId: VALID_UUID },
+        apiResponse: {
+          signers: [{ email: 'signer@example.com', name: 'Signer' }],
+        },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.signers).toBeDefined();
+    });
+  });
+
+  describe('Envelope: updateRecipients', () => {
+    it('should update recipient email and name', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'updateRecipients',
+        params: {
+          envelopeId: VALID_UUID,
+          recipientId: '1',
+          updateFields: {
+            email: 'new@example.com',
+            name: 'New Name',
+          },
+        },
+        apiResponse: { recipientUpdateResults: [] },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+  });
+
+  describe('Envelope: getAuditEvents', () => {
+    it('should get audit events for an envelope', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'getAuditEvents',
+        params: { envelopeId: VALID_UUID },
+        apiResponse: { auditEvents: [{ eventType: 'signed' }] },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.auditEvents).toBeDefined();
+    });
+  });
+
+  describe('Envelope: listDocuments', () => {
+    it('should list documents in an envelope', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'listDocuments',
+        params: { envelopeId: VALID_UUID },
+        apiResponse: {
+          envelopeDocuments: [
+            { documentId: '1', name: 'contract.pdf' },
+          ],
+        },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.envelopeDocuments).toBeDefined();
+    });
+  });
+
+  describe('Envelope: create', () => {
+    it('should create an envelope with base64 document', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'create',
+        params: {
+          emailSubject: 'Please sign this',
+          signerEmail: 'signer@example.com',
+          signerName: 'John Doe',
+          document: 'SGVsbG8gV29ybGQ=',
+          documentName: 'contract.pdf',
+          sendImmediately: true,
+          additionalOptions: {},
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.envelopeId).toBe(VALID_UUID);
+      expect(result[0][0].json.status).toBe('sent');
+    });
+
+    it('should create an envelope with binary data', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'create',
+        items: [{
+          json: {},
+          binary: { data: { data: 'SGVsbG8gV29ybGQ=' } },
+        }],
+        params: {
+          emailSubject: 'Sign document',
+          signerEmail: 'signer@example.com',
+          signerName: 'Jane Doe',
+          document: 'data',
+          documentName: 'file.pdf',
+          sendImmediately: false,
+          additionalOptions: {},
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'created' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.status).toBe('created');
+    });
+
+    it('should create an envelope with anchor string positioning', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'create',
+        params: {
+          emailSubject: 'Sign here',
+          signerEmail: 'signer@example.com',
+          signerName: 'Signer',
+          document: 'SGVsbG8gV29ybGQ=',
+          documentName: 'doc.pdf',
+          sendImmediately: true,
+          additionalOptions: {
+            useAnchor: true,
+            anchorString: '/sign/',
+          },
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.envelopeId).toBe(VALID_UUID);
+    });
+
+    it('should create an envelope with embedded signing', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'create',
+        params: {
+          emailSubject: 'Embedded Sign',
+          signerEmail: 'signer@example.com',
+          signerName: 'Embedded Signer',
+          document: 'SGVsbG8gV29ybGQ=',
+          documentName: 'doc.pdf',
+          sendImmediately: true,
+          additionalOptions: {
+            embeddedSigning: true,
+            embeddedClientUserId: 'user-123',
+          },
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+
+    it('should create an envelope with CC, additional signers, and docs', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'create',
+        params: {
+          emailSubject: 'Multi-party signing',
+          signerEmail: 'signer1@example.com',
+          signerName: 'Signer One',
+          document: 'SGVsbG8gV29ybGQ=',
+          documentName: 'contract.pdf',
+          sendImmediately: true,
+          additionalOptions: {
+            ccEmail: 'cc@example.com',
+            ccName: 'CC Person',
+            emailBlurb: 'Please review and sign',
+            additionalSigners: {
+              signers: [
+                { email: 'signer2@example.com', name: 'Signer Two', routingOrder: 2 },
+              ],
+            },
+            additionalDocuments: {
+              documents: [
+                { document: 'SGVsbG8gV29ybGQ=', documentName: 'appendix.pdf' },
+              ],
+            },
+          },
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+
+    it('should create an envelope with additional tabs', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'create',
+        params: {
+          emailSubject: 'Tabs test',
+          signerEmail: 'signer@example.com',
+          signerName: 'Signer',
+          document: 'SGVsbG8gV29ybGQ=',
+          documentName: 'doc.pdf',
+          sendImmediately: true,
+          additionalOptions: {
+            additionalTabs: {
+              tabs: [
+                { tabType: 'initialHereTabs', documentId: '1', pageNumber: 1, xPosition: 100, yPosition: 200, tabLabel: 'init', required: true },
+                { tabType: 'dateSignedTabs', documentId: '1', pageNumber: 1, xPosition: 100, yPosition: 300 },
+              ],
+            },
+          },
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+
+    it('should create an envelope with merge fields', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'create',
+        params: {
+          emailSubject: 'Merge fields test',
+          signerEmail: 'signer@example.com',
+          signerName: 'Signer',
+          document: 'SGVsbG8gV29ybGQ=',
+          documentName: 'doc.pdf',
+          sendImmediately: true,
+          additionalOptions: {
+            mergeFields: {
+              fields: [
+                { placeholder: '{{FirstName}}', value: 'John', fontSize: 'Size12' },
+                { placeholder: '{{LastName}}', value: 'Doe' },
+              ],
+            },
+          },
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+
+    it('should create an envelope with custom fields', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'create',
+        params: {
+          emailSubject: 'Custom fields',
+          signerEmail: 'signer@example.com',
+          signerName: 'Signer',
+          document: 'SGVsbG8gV29ybGQ=',
+          documentName: 'doc.pdf',
+          sendImmediately: true,
+          additionalOptions: {
+            customFields: {
+              textFields: [
+                { fieldId: '1', name: 'OrderNumber', value: 'ORD-123', show: true, required: false },
+              ],
+            },
+          },
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+
+    it('should create an envelope with envelope-level options', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'create',
+        params: {
+          emailSubject: 'Options test',
+          signerEmail: 'signer@example.com',
+          signerName: 'Signer',
+          document: 'SGVsbG8gV29ybGQ=',
+          documentName: 'doc.pdf',
+          sendImmediately: true,
+          additionalOptions: {
+            allowMarkup: true,
+            allowReassign: false,
+            brandId: 'brand-123',
+            enableWetSign: true,
+            enforceSignerVisibility: true,
+          },
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+  });
+
+  describe('Envelope: createFromTemplate', () => {
+    it('should create an envelope from a template', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'createFromTemplate',
+        params: {
+          templateId: VALID_UUID,
+          emailSubject: 'Template envelope',
+          roleName: 'Signer',
+          recipientEmail: 'signer@example.com',
+          recipientName: 'John Doe',
+        },
+        apiResponse: { envelopeId: VALID_UUID, status: 'sent' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.status).toBe('sent');
+    });
+  });
+
+  describe('Envelope: createRecipientView', () => {
+    it('should create embedded signing URL', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'createRecipientView',
+        params: {
+          envelopeId: VALID_UUID,
+          signerEmail: 'signer@example.com',
+          signerName: 'Signer',
+          returnUrl: 'https://example.com/complete',
+          authenticationMethod: 'None',
+          clientUserId: 'user-123',
+        },
+        apiResponse: { url: 'https://docusign.com/signing/abc123' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.url).toBeDefined();
+    });
+
+    it('should generate clientUserId if not provided', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'createRecipientView',
+        params: {
+          envelopeId: VALID_UUID,
+          signerEmail: 'signer@example.com',
+          signerName: 'Signer',
+          returnUrl: 'https://example.com/complete',
+          authenticationMethod: 'None',
+          clientUserId: '',
+        },
+        apiResponse: { url: 'https://docusign.com/signing/abc123' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+  });
+
+  describe('Envelope: downloadDocument', () => {
+    it('should download a document as binary', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'downloadDocument',
+        params: {
+          envelopeId: VALID_UUID,
+          documentId: '1',
+          binaryPropertyName: 'data',
+        },
+        apiResponse: { body: Buffer.from('PDF content') },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.success).toBe(true);
+      expect(result[0][0].binary).toBeDefined();
+      expect(result[0][0].binary?.data).toBeDefined();
+    });
+  });
+
+  describe('Template: get', () => {
+    it('should get a template by ID', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'template',
+        operation: 'get',
+        params: { templateId: VALID_UUID },
+        apiResponse: { templateId: VALID_UUID, name: 'My Template' },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.templateId).toBe(VALID_UUID);
+    });
+  });
+
+  describe('Template: getAll', () => {
+    it('should get all templates with limit', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'template',
+        operation: 'getAll',
+        params: {
+          returnAll: false,
+          limit: 10,
+          filters: {},
+        },
+        apiResponse: {
+          envelopeTemplates: [
+            { templateId: 'tmpl-1', name: 'Template 1' },
+          ],
+        },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+
+    it('should get all templates with filters', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'template',
+        operation: 'getAll',
+        params: {
+          returnAll: false,
+          limit: 10,
+          filters: {
+            searchText: 'contract',
+            folderId: 'folder-123',
+            sharedByMe: true,
+          },
+        },
+        apiResponse: { envelopeTemplates: [] },
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(0);
+    });
+  });
+
+  describe('Error handling', () => {
+    it('should handle unknown resource', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'unknown',
+        operation: 'get',
+      });
+
+      await expect(node.execute.call(ctx as never)).rejects.toThrow();
+    });
+
+    it('should handle unknown operation', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'unknownOp',
+      });
+
+      await expect(node.execute.call(ctx as never)).rejects.toThrow();
+    });
+
+    it('should handle unknown template operation', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'template',
+        operation: 'unknownOp',
+      });
+
+      await expect(node.execute.call(ctx as never)).rejects.toThrow();
+    });
+
+    it('should continueOnFail and return error in json', async () => {
+      const { DocuSign } = await import('../nodes/DocuSign/DocuSign.node');
+      const node = new DocuSign();
+
+      const ctx = createExecuteContext({
+        resource: 'envelope',
+        operation: 'updateRecipients',
+        params: {
+          envelopeId: VALID_UUID,
+          recipientId: '1',
+          updateFields: {},
+        },
+        shouldFail: true,
+      });
+
+      const result = await node.execute.call(ctx as never);
+      expect(result[0][0].json.error).toBeDefined();
+      expect(result[0][0].json.resource).toBe('envelope');
+      expect(result[0][0].json.operation).toBe('updateRecipients');
+    });
+  });
+});
+
+// ============================================================================
+// Credential Tests (JWT & Token Caching)
+// ============================================================================
+
+describe('Credential Authentication', () => {
+  it('should have correct properties defined', async () => {
+    const { DocuSignApi } = await import('../credentials/DocuSignApi.credentials');
+    const cred = new DocuSignApi();
+    const names = cred.properties.map(p => p.name);
+
+    expect(names).toContain('environment');
+    expect(names).toContain('region');
+    expect(names).toContain('integrationKey');
+    expect(names).toContain('userId');
+    expect(names).toContain('accountId');
+    expect(names).toContain('privateKey');
+    expect(names).toContain('webhookSecret');
+  });
+
+  it('should have region show only for production', async () => {
+    const { DocuSignApi } = await import('../credentials/DocuSignApi.credentials');
+    const cred = new DocuSignApi();
+    const regionProp = cred.properties.find(p => p.name === 'region');
+
+    expect(regionProp?.displayOptions?.show?.environment).toEqual(['production']);
+  });
+
+  it('should have password type for privateKey and webhookSecret', async () => {
+    const { DocuSignApi } = await import('../credentials/DocuSignApi.credentials');
+    const cred = new DocuSignApi();
+    const privateKeyProp = cred.properties.find(p => p.name === 'privateKey');
+    const webhookSecretProp = cred.properties.find(p => p.name === 'webhookSecret');
+
+    expect(privateKeyProp?.typeOptions?.password).toBe(true);
+    expect(webhookSecretProp?.typeOptions?.password).toBe(true);
+  });
+
+  it('should export getApiBaseUrl utility', async () => {
+    const { getApiBaseUrl } = await import('../credentials/DocuSignApi.credentials');
+    expect(getApiBaseUrl('demo', 'na')).toBe('https://demo.docusign.net/restapi/v2.1');
+    expect(getApiBaseUrl('production', 'na')).toBe('https://na1.docusign.net/restapi/v2.1');
+    expect(getApiBaseUrl('production', 'eu')).toBe('https://eu.docusign.net/restapi/v2.1');
+    expect(getApiBaseUrl('production', 'au')).toBe('https://au.docusign.net/restapi/v2.1');
+    expect(getApiBaseUrl('production', 'ca')).toBe('https://ca.docusign.net/restapi/v2.1');
+    expect(getApiBaseUrl('production', 'invalid')).toBe('https://na1.docusign.net/restapi/v2.1');
   });
 });
