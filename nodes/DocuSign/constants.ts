@@ -117,6 +117,18 @@ export const RESOURCE_ENDPOINTS: Record<string, string> = {
   permissionProfile: 'permission_profiles',
   accountCustomField: 'custom_fields',
   connectEvent: 'connect',
+  billing: 'billing_plan',
+  cloudStorage: 'cloud_storage',
+  workspace: 'workspaces',
+  emailArchive: 'email_archive',
+  diagnostics: 'diagnostics',
+  notary: 'notary',
+  trustServiceProvider: 'trust_service_providers',
+  envelopeNotification: 'notification',
+  templateCustomField: 'custom_fields',
+  templateDocument: 'documents',
+  templateLock: 'lock',
+  templateNotification: 'notification',
 };
 
 /**
@@ -150,6 +162,18 @@ export const RESOURCE_ID_PARAMS: Record<string, string> = {
   permissionProfile: 'permissionProfileId',
   accountCustomField: 'fieldId',
   connectEvent: 'failureId',
+  billing: '',
+  cloudStorage: 'serviceId',
+  workspace: 'workspaceId',
+  emailArchive: 'bccEmailArchiveId',
+  diagnostics: '',
+  notary: '',
+  trustServiceProvider: '',
+  envelopeNotification: 'envelopeId',
+  templateCustomField: 'templateId',
+  templateDocument: 'templateId',
+  templateLock: 'templateId',
+  templateNotification: 'templateId',
 };
 
 /**

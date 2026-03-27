@@ -1,0 +1,104 @@
+import { describe, it, expect } from 'vitest';
+import { createMockExecuteContext } from '../setup/mockContext';
+import { VALID_UUID } from '../setup/constants';
+
+describe('Envelope Notification', () => {
+  const getNode = async () => {
+    const { DocuSign } = await import('../../nodes/DocuSign/DocuSign.node');
+    return new DocuSign();
+  };
+
+  describe('get', () => {
+    it('should get envelope notification settings', async () => {
+      const node = await getNode();
+      const ctx = createMockExecuteContext({
+        resource: 'envelopeNotification',
+        operation: 'get',
+        params: { envelopeId: VALID_UUID },
+        apiResponse: { useAccountDefaults: 'false' },
+      });
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+
+    it('should reject invalid envelope UUID', async () => {
+      const node = await getNode();
+      const ctx = createMockExecuteContext({
+        resource: 'envelopeNotification',
+        operation: 'get',
+        params: { envelopeId: 'not-a-uuid' },
+      });
+      await expect(node.execute.call(ctx as never)).rejects.toThrow();
+    });
+  });
+
+  describe('update', () => {
+    it('should update with reminder settings', async () => {
+      const node = await getNode();
+      const ctx = createMockExecuteContext({
+        resource: 'envelopeNotification',
+        operation: 'update',
+        params: {
+          envelopeId: VALID_UUID,
+          useAccountDefaults: false,
+          reminderSettings: {
+            reminderEnabled: true,
+            reminderDelay: 2,
+            reminderFrequency: 1,
+          },
+          expirationSettings: {},
+        },
+        apiResponse: {},
+      });
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+
+    it('should update with expiration settings', async () => {
+      const node = await getNode();
+      const ctx = createMockExecuteContext({
+        resource: 'envelopeNotification',
+        operation: 'update',
+        params: {
+          envelopeId: VALID_UUID,
+          useAccountDefaults: false,
+          reminderSettings: {},
+          expirationSettings: {
+            expireEnabled: true,
+            expireAfter: 120,
+            expireWarn: 3,
+          },
+        },
+        apiResponse: {},
+      });
+      const result = await node.execute.call(ctx as never);
+      expect(result[0]).toHaveLength(1);
+    });
+
+    it('should reject invalid envelope UUID', async () => {
+      const node = await getNode();
+      const ctx = createMockExecuteContext({
+        resource: 'envelopeNotification',
+        operation: 'update',
+        params: {
+          envelopeId: 'not-a-uuid',
+          useAccountDefaults: false,
+          reminderSettings: {},
+          expirationSettings: {},
+        },
+      });
+      await expect(node.execute.call(ctx as never)).rejects.toThrow();
+    });
+  });
+
+  describe('unknown operation', () => {
+    it('should throw for unknown operation', async () => {
+      const node = await getNode();
+      const ctx = createMockExecuteContext({
+        resource: 'envelopeNotification',
+        operation: 'unknown',
+      });
+      await expect(node.execute.call(ctx as never)).rejects.toThrow('Unknown operation');
+    });
+  });
+});

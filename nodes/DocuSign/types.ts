@@ -596,3 +596,126 @@ export interface DocuSignEnvelopeEmailSetting {
     email?: string;
   }>;
 }
+
+/**
+ * Billing plan details
+ */
+export interface DocuSignBillingPlan {
+  planId?: string;
+  planName?: string;
+  paymentCycle?: string;
+  currencyCode?: string;
+  planFeatureSets?: IDataObject[];
+}
+
+/**
+ * Billing invoice
+ */
+export interface DocuSignBillingInvoice {
+  invoiceId?: string;
+  amount?: string;
+  invoiceDate?: string;
+  dueDate?: string;
+  status?: string;
+}
+
+/**
+ * Billing payment
+ */
+export interface DocuSignBillingPayment {
+  paymentId?: string;
+  amount?: string;
+  paymentDate?: string;
+  paymentType?: string;
+}
+
+/**
+ * Cloud storage provider
+ */
+export interface DocuSignCloudStorageProvider {
+  serviceId?: string;
+  serviceName?: string;
+  authenticationUrl?: string;
+}
+
+/**
+ * Workspace definition
+ */
+export interface DocuSignWorkspace {
+  workspaceId?: string;
+  workspaceName?: string;
+  status?: string;
+  created?: string;
+}
+
+/**
+ * Email archive entry
+ */
+export interface DocuSignEmailArchive {
+  bccEmailArchiveId?: string;
+  email?: string;
+  created?: string;
+  status?: string;
+}
+
+/**
+ * Diagnostics settings
+ */
+export interface DocuSignDiagnosticsSettings {
+  apiRequestLogging?: string;
+  apiRequestLogMaxEntries?: string;
+  apiRequestLogRemainingEntries?: string;
+}
+
+/**
+ * Notary profile
+ */
+export interface DocuSignNotary {
+  notaryId?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  commissionNumber?: string;
+  commissionExpiry?: string;
+}
+
+/**
+ * Trust service seal provider
+ */
+export interface DocuSignSealProvider {
+  sealIdentifier?: string;
+  sealDisplayName?: string;
+  signatureProviderName?: string;
+}
+
+/**
+ * Template document
+ */
+export interface DocuSignTemplateDocument {
+  documentId?: string;
+  name?: string;
+  fileExtension?: string;
+  uri?: string;
+}
+
+/**
+ * Template custom field
+ */
+export interface DocuSignTemplateCustomField {
+  fieldId?: string;
+  name?: string;
+  value?: string;
+  show?: string;
+  required?: string;
+}
+
+/**
+ * Template lock
+ */
+export interface DocuSignTemplateLock {
+  lockToken?: string;
+  lockType?: string;
+  lockDurationInSeconds?: string;
+  lockedByApp?: string;
+  lockExpirationDateTime?: string;
+}

@@ -758,7 +758,7 @@ describe('Resource Index', () => {
   it('should export allOperations', async () => {
     const { allOperations } = await import('../nodes/DocuSign/resources');
     expect(allOperations).toBeDefined();
-    expect(allOperations.length).toBe(31);
+    expect(allOperations.length).toBe(43);
   });
 
   it('should export allFields', async () => {
@@ -3587,7 +3587,7 @@ describe('Phase 3: Resource Index updates', () => {
 
   it('should have 22 operation sets in allOperations', async () => {
     const { allOperations } = await import('../nodes/DocuSign/resources');
-    expect(allOperations).toHaveLength(31);
+    expect(allOperations).toHaveLength(43);
   });
 
   it('should have allFields with entries from all resources', async () => {
@@ -4606,7 +4606,7 @@ describe('Phase 4 Resource Definitions', () => {
 
   it('should have 22 resources in resourceProperty', async () => {
     const { resourceProperty } = await import('../nodes/DocuSign/resources');
-    expect(resourceProperty.options).toHaveLength(31);
+    expect(resourceProperty.options).toHaveLength(43);
     const values = (resourceProperty.options as Array<{ value: string }>).map((o) => o.value);
     expect(values).toContain('brand');
     expect(values).toContain('documentGeneration');

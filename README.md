@@ -52,6 +52,18 @@ An [n8n](https://n8n.io/) community node for [DocuSign](https://www.docusign.com
 - **Account Custom Fields** - Manage account-level custom field definitions
 - **Connect Events** - Monitor and retry DocuSign Connect delivery events
 - **PowerForm Data** - Retrieve PowerForm submission data
+- **Envelope Notifications** - Manage reminder and expiration settings on envelopes
+- **Template Documents** - Add, get, list, and remove documents on templates
+- **Template Custom Fields** - CRUD custom metadata fields on templates
+- **Template Locks** - Lock/unlock templates to prevent concurrent editing
+- **Template Notifications** - Manage default reminder and expiration on templates
+- **Billing** - Retrieve billing plan, invoices, and payment history
+- **Cloud Storage** - Browse connected cloud storage providers and files
+- **Workspaces** - Manage collaboration workspaces with file operations
+- **Email Archive** - Manage BCC compliance email archiving
+- **Diagnostics** - Manage API request logging for troubleshooting
+- **Notary** - Remote online notarization profile and jurisdiction management
+- **Trust Service Providers** - List EU eIDAS electronic seal providers
 - **Webhook Trigger** - Real-time event notifications via DocuSign Connect
 - **Regional Support** - NA, EU, AU, and CA regions for production environments
 - **Rate Limiting** - Built-in retry logic with exponential backoff
@@ -152,6 +164,18 @@ The main node for interacting with the DocuSign eSignature API.
 | **Permission Profile** | Create, Get, Get Many, Update, Delete |
 | **Account Custom Field** | Create, Get Many, Update, Delete |
 | **Connect Event** | Get Failures, Get Logs, Retry |
+| **Envelope Notification** | Get, Update |
+| **Template Document** | Add, Get, Get Many, Remove |
+| **Template Custom Field** | Create, Get, Update, Delete |
+| **Template Lock** | Lock, Get Lock, Update Lock, Unlock |
+| **Template Notification** | Get, Update |
+| **Billing** | Get Plan, Get Invoice, Get Many Invoices, Get Payment, Get Many Payments |
+| **Cloud Storage** | List Providers, List Files, Get File |
+| **Workspace** | Create, Get, Get Many, Delete, Create File, Get Files |
+| **Email Archive** | Create, Get Many, Delete |
+| **Diagnostics** | Get Settings, Update Settings, Get Log |
+| **Notary** | Get, Get Jurisdictions, Create |
+| **Trust Service Provider** | Get Seal Providers |
 
 #### Envelope Create Options
 
@@ -319,6 +343,38 @@ Schedule Trigger > DocuSign (Connect Event: Get Failures) > IF (Has Failures) > 
 ```
 
 Monitor and auto-retry failed DocuSign Connect webhook deliveries.
+
+### 16. Billing Report
+
+```
+Schedule Trigger > DocuSign (Billing: Get Plan) > DocuSign (Billing: Get Many Invoices) > Google Sheets (Update Dashboard)
+```
+
+Retrieve billing plan details and invoice history for reporting.
+
+### 17. Template Document Management
+
+```
+HTTP Request (Get Document) > DocuSign (Template Document: Add) > DocuSign (Template Document: Get Many) > Slack (Confirm)
+```
+
+Upload new documents to templates and verify they were added.
+
+### 18. Email Archive Compliance
+
+```
+Schedule Trigger > DocuSign (Email Archive: Get Many) > IF (Missing Address) > DocuSign (Email Archive: Create) > Slack (Alert)
+```
+
+Ensure BCC compliance email addresses are configured for audit trails.
+
+### 19. API Diagnostics Monitoring
+
+```
+Schedule Trigger > DocuSign (Diagnostics: Get Settings) > IF (Logging Disabled) > DocuSign (Diagnostics: Update Settings, enable=true)
+```
+
+Monitor and ensure API request logging is enabled for troubleshooting.
 
 ### Importable Workflow: Send Document for Signature
 
@@ -559,6 +615,27 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - [n8n Community Nodes Documentation](https://docs.n8n.io/integrations/community-nodes/)
 
 ## Changelog
+
+### v0.11.0
+
+**Envelope & Template Sub-Resources:**
+- **Envelope Notifications** - Manage reminder and expiration settings on individual envelopes
+- **Template Documents** - Add, get, list, and remove documents on templates
+- **Template Custom Fields** - CRUD custom metadata fields on templates
+- **Template Locks** - Lock/unlock templates to prevent concurrent editing
+- **Template Notifications** - Manage default reminder and expiration on templates
+
+**Account & Administration:**
+- **Billing** - Retrieve billing plan, invoices, and payment history
+- **Email Archive** - Manage BCC compliance email archiving
+- **Diagnostics** - API request logging for troubleshooting
+
+**External Services:**
+- **Cloud Storage** - Browse connected cloud storage providers and files
+- **Workspaces** - Manage collaboration workspaces with file operations
+- **Notary** - Remote online notarization profile and jurisdiction management
+- **Trust Service Providers** - List EU eIDAS electronic seal providers
+- 502 total tests, 43 resource definitions (12 new)
 
 ### v0.10.0
 

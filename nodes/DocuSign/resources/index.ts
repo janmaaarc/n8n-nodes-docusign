@@ -2,16 +2,20 @@ import type { INodeProperties } from 'n8n-workflow';
 import { accountCustomFieldOperations, accountCustomFieldFields } from './accountCustomField';
 import { accountGroupOperations, accountGroupFields } from './accountGroup';
 import { accountUserOperations, accountUserFields } from './accountUser';
+import { billingOperations, billingFields } from './billing';
 import { brandOperations, brandFields } from './brand';
 import { bulkSendOperations, bulkSendFields } from './bulkSend';
 import { chunkedUploadOperations, chunkedUploadFields } from './chunkedUpload';
+import { cloudStorageOperations, cloudStorageFields } from './cloudStorage';
 import { commentsOperations, commentsFields } from './comments';
 import { compositeTemplateOperations, compositeTemplateFields } from './compositeTemplate';
 import { connectConfigOperations, connectConfigFields } from './connectConfig';
 import { connectEventOperations, connectEventFields } from './connectEvent';
 import { contactOperations, contactFields } from './contact';
 import { customTabOperations, customTabFields } from './customTab';
+import { diagnosticsOperations, diagnosticsFields } from './diagnostics';
 import { documentGenerationOperations, documentGenerationFields } from './documentGeneration';
+import { emailArchiveOperations, emailArchiveFields } from './emailArchive';
 import { envelopeOperations, envelopeFields } from './envelope';
 import { envelopeAttachmentOperations, envelopeAttachmentFields } from './envelopeAttachment';
 import {
@@ -27,9 +31,14 @@ import {
   envelopeEmailSettingFields,
 } from './envelopeEmailSetting';
 import { envelopeLockOperations, envelopeLockFields } from './envelopeLock';
+import {
+  envelopeNotificationOperations,
+  envelopeNotificationFields,
+} from './envelopeNotification';
 import { envelopeTransferOperations, envelopeTransferFields } from './envelopeTransfer';
 import { folderOperations, folderFields } from './folder';
 import { idVerificationOperations, idVerificationFields } from './idVerification';
+import { notaryOperations, notaryFields } from './notary';
 import { paymentTabOperations, paymentTabFields } from './paymentTab';
 import { permissionProfileOperations, permissionProfileFields } from './permissionProfile';
 import { powerFormOperations, powerFormFields } from './powerForm';
@@ -38,7 +47,22 @@ import { scheduledRoutingOperations, scheduledRoutingFields } from './scheduledR
 import { signingGroupOperations, signingGroupFields } from './signingGroup';
 import { supplementalDocOperations, supplementalDocFields } from './supplementalDoc';
 import { templateOperations, templateFields } from './template';
+import {
+  templateCustomFieldOperations,
+  templateCustomFieldFields,
+} from './templateCustomField';
+import { templateDocumentOperations, templateDocumentFields } from './templateDocument';
+import { templateLockOperations, templateLockFields } from './templateLock';
+import {
+  templateNotificationOperations,
+  templateNotificationFields,
+} from './templateNotification';
 import { templateRecipientsOperations, templateRecipientsFields } from './templateRecipients';
+import {
+  trustServiceProviderOperations,
+  trustServiceProviderFields,
+} from './trustServiceProvider';
+import { workspaceOperations, workspaceFields } from './workspace';
 
 /**
  * Resource selector for the DocuSign node
@@ -65,6 +89,11 @@ export const resourceProperty: INodeProperties = {
       description: 'Manage users in the DocuSign account',
     },
     {
+      name: 'Billing',
+      value: 'billing',
+      description: 'View billing plan, invoices, and payments',
+    },
+    {
       name: 'Brand',
       value: 'brand',
       description: 'Create, get, update, and delete account branding',
@@ -78,6 +107,11 @@ export const resourceProperty: INodeProperties = {
       name: 'Chunked Upload',
       value: 'chunkedUpload',
       description: 'Upload large documents in chunks',
+    },
+    {
+      name: 'Cloud Storage',
+      value: 'cloudStorage',
+      description: 'Browse cloud storage providers and files',
     },
     {
       name: 'Comments',
@@ -110,9 +144,19 @@ export const resourceProperty: INodeProperties = {
       description: 'Manage reusable custom tab (field) definitions',
     },
     {
+      name: 'Diagnostics',
+      value: 'diagnostics',
+      description: 'Manage API request logging settings',
+    },
+    {
       name: 'Document Generation',
       value: 'documentGeneration',
       description: 'Generate documents from templates with dynamic data fields',
+    },
+    {
+      name: 'Email Archive',
+      value: 'emailArchive',
+      description: 'Manage BCC compliance email archive addresses',
     },
     {
       name: 'Envelope',
@@ -145,6 +189,11 @@ export const resourceProperty: INodeProperties = {
       description: 'Lock and unlock envelopes for safe editing',
     },
     {
+      name: 'Envelope Notification',
+      value: 'envelopeNotification',
+      description: 'Manage reminder and expiration settings on envelopes',
+    },
+    {
       name: 'Envelope Transfer',
       value: 'envelopeTransfer',
       description: 'Manage envelope ownership transfer rules',
@@ -158,6 +207,11 @@ export const resourceProperty: INodeProperties = {
       name: 'ID Verification',
       value: 'idVerification',
       description: 'Get available identity verification workflows',
+    },
+    {
+      name: 'Notary',
+      value: 'notary',
+      description: 'Manage remote online notarization profiles',
     },
     {
       name: 'Payment Tab',
@@ -200,9 +254,39 @@ export const resourceProperty: INodeProperties = {
       description: 'Create, update, delete, and use envelope templates',
     },
     {
+      name: 'Template Custom Field',
+      value: 'templateCustomField',
+      description: 'Manage custom metadata fields on templates',
+    },
+    {
+      name: 'Template Document',
+      value: 'templateDocument',
+      description: 'Add and manage documents on templates',
+    },
+    {
+      name: 'Template Lock',
+      value: 'templateLock',
+      description: 'Lock and unlock templates for safe editing',
+    },
+    {
+      name: 'Template Notification',
+      value: 'templateNotification',
+      description: 'Manage default reminder/expiration settings on templates',
+    },
+    {
       name: 'Template Recipients',
       value: 'templateRecipients',
       description: 'Manage recipient roles on templates',
+    },
+    {
+      name: 'Trust Service Provider',
+      value: 'trustServiceProvider',
+      description: 'List EU eIDAS seal providers',
+    },
+    {
+      name: 'Workspace',
+      value: 'workspace',
+      description: 'Manage collaboration workspaces and files',
     },
   ],
   default: 'envelope',
@@ -215,25 +299,31 @@ export const allOperations: INodeProperties[] = [
   accountCustomFieldOperations,
   accountGroupOperations,
   accountUserOperations,
+  billingOperations,
   brandOperations,
   bulkSendOperations,
   chunkedUploadOperations,
+  cloudStorageOperations,
   commentsOperations,
   compositeTemplateOperations,
   connectConfigOperations,
   connectEventOperations,
   contactOperations,
   customTabOperations,
+  diagnosticsOperations,
   documentGenerationOperations,
+  emailArchiveOperations,
   envelopeOperations,
   envelopeAttachmentOperations,
   envelopeCustomFieldOperations,
   envelopeDocumentFieldOperations,
   envelopeEmailSettingOperations,
   envelopeLockOperations,
+  envelopeNotificationOperations,
   envelopeTransferOperations,
   folderOperations,
   idVerificationOperations,
+  notaryOperations,
   paymentTabOperations,
   permissionProfileOperations,
   powerFormOperations,
@@ -242,7 +332,13 @@ export const allOperations: INodeProperties[] = [
   signingGroupOperations,
   supplementalDocOperations,
   templateOperations,
+  templateCustomFieldOperations,
+  templateDocumentOperations,
+  templateLockOperations,
+  templateNotificationOperations,
   templateRecipientsOperations,
+  trustServiceProviderOperations,
+  workspaceOperations,
 ];
 
 /**
@@ -252,25 +348,31 @@ export const allFields: INodeProperties[] = [
   ...accountCustomFieldFields,
   ...accountGroupFields,
   ...accountUserFields,
+  ...billingFields,
   ...brandFields,
   ...bulkSendFields,
   ...chunkedUploadFields,
+  ...cloudStorageFields,
   ...commentsFields,
   ...compositeTemplateFields,
   ...connectConfigFields,
   ...connectEventFields,
   ...contactFields,
   ...customTabFields,
+  ...diagnosticsFields,
   ...documentGenerationFields,
+  ...emailArchiveFields,
   ...envelopeFields,
   ...envelopeAttachmentFields,
   ...envelopeCustomFieldFields,
   ...envelopeDocumentFieldFields,
   ...envelopeEmailSettingFields,
   ...envelopeLockFields,
+  ...envelopeNotificationFields,
   ...envelopeTransferFields,
   ...folderFields,
   ...idVerificationFields,
+  ...notaryFields,
   ...paymentTabFields,
   ...permissionProfileFields,
   ...powerFormFields,
@@ -279,5 +381,11 @@ export const allFields: INodeProperties[] = [
   ...signingGroupFields,
   ...supplementalDocFields,
   ...templateFields,
+  ...templateCustomFieldFields,
+  ...templateDocumentFields,
+  ...templateLockFields,
+  ...templateNotificationFields,
   ...templateRecipientsFields,
+  ...trustServiceProviderFields,
+  ...workspaceFields,
 ];

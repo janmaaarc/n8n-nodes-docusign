@@ -4,6 +4,7 @@
 
 | Version | Supported          |
 | ------- | ------------------ |
+| 0.11.x  | :white_check_mark: |
 | 0.10.x  | :white_check_mark: |
 | 0.9.x   | :white_check_mark: |
 | 0.8.x   | :white_check_mark: |
@@ -93,6 +94,25 @@ This node implements several security measures:
    - Use production only for live workflows
 
 ## Security Changelog
+
+### v0.11.0
+- Envelope notification envelope ID validation (UUID format)
+- Template document template ID and document ID validation (UUID format)
+- Template document name validation (required, non-empty)
+- Template custom field template ID validation (UUID format)
+- Template custom field name validation (required, non-empty)
+- Template lock template ID validation (UUID format)
+- Template lock token validation for update/delete operations
+- Template lock X-DocuSign-Edit header for secure lock operations
+- Template notification template ID validation (UUID format)
+- Email archive email validation (RFC 5322)
+- Email archive BCC ID validation (required, non-empty)
+- Notary email validation (RFC 5322) and name validation
+- Cloud storage service ID validation (required, non-empty)
+- Cloud storage folder ID validation (required, non-empty)
+- Workspace name validation (required, non-empty)
+- Diagnostics request log ID validation (required, non-empty)
+- Maintained all existing security features
 
 ### v0.10.0
 - Envelope custom field validation (envelope ID as UUID)

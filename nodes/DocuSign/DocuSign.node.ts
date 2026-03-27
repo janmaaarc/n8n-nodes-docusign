@@ -3481,6 +3481,587 @@ async function handleConnectEventRetry(
 }
 
 // ============================================================================
+
+// ============================================================================
+// Envelope Notification Handlers
+// ============================================================================
+
+async function handleEnvelopeNotificationGet(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const envelopeId = ctx.getNodeParameter('envelopeId', itemIndex) as string;
+  validateField('Envelope ID', envelopeId, 'uuid');
+  return await docuSignApiRequest.call(ctx, 'GET', `/envelopes/${envelopeId}/notification`);
+}
+
+async function handleEnvelopeNotificationUpdate(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const envelopeId = ctx.getNodeParameter('envelopeId', itemIndex) as string;
+  const useAccountDefaults = ctx.getNodeParameter('useAccountDefaults', itemIndex, false) as boolean;
+  const reminderSettings = ctx.getNodeParameter('reminderSettings', itemIndex, {}) as IDataObject;
+  const expirationSettings = ctx.getNodeParameter('expirationSettings', itemIndex, {}) as IDataObject;
+
+  validateField('Envelope ID', envelopeId, 'uuid');
+
+  const body: IDataObject = {
+    useAccountDefaults: useAccountDefaults ? 'true' : 'false',
+  };
+
+  if (!useAccountDefaults && reminderSettings.reminderEnabled) {
+    body.reminders = {
+      reminderEnabled: 'true',
+      reminderDelay: String(reminderSettings.reminderDelay ?? 2),
+      reminderFrequency: String(reminderSettings.reminderFrequency ?? 1),
+    };
+  }
+
+  if (!useAccountDefaults && expirationSettings.expireEnabled) {
+    body.expirations = {
+      expireEnabled: 'true',
+      expireAfter: String(expirationSettings.expireAfter ?? 120),
+      expireWarn: String(expirationSettings.expireWarn ?? 3),
+    };
+  }
+
+  return await docuSignApiRequest.call(ctx, 'PUT', `/envelopes/${envelopeId}/notification`, body);
+}
+
+// ============================================================================
+// Template Document Handlers
+// ============================================================================
+
+async function handleTemplateDocumentGet(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const documentId = ctx.getNodeParameter('documentId', itemIndex) as string;
+  validateField('Template ID', templateId, 'uuid');
+  validateField('Document ID', documentId, 'required');
+  return await docuSignApiRequest.call(ctx, 'GET', `/templates/${templateId}/documents/${documentId}`);
+}
+
+async function handleTemplateDocumentGetAll(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  validateField('Template ID', templateId, 'uuid');
+  return await docuSignApiRequest.call(ctx, 'GET', `/templates/${templateId}/documents`);
+}
+
+async function handleTemplateDocumentAdd(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const documentName = ctx.getNodeParameter('documentName', itemIndex) as string;
+  const documentBase64 = ctx.getNodeParameter('documentBase64', itemIndex) as string;
+  const fileExtension = ctx.getNodeParameter('fileExtension', itemIndex, 'pdf') as string;
+  const documentOrder = ctx.getNodeParameter('documentOrder', itemIndex, 1) as number;
+
+  validateField('Template ID', templateId, 'uuid');
+  validateField('Document Name', documentName, 'required');
+  validateField('Document Content', documentBase64, 'required');
+  validateField('Document Content', documentBase64, 'base64');
+
+  const body: IDataObject = {
+    documents: [
+      {
+        documentBase64,
+        name: documentName,
+        fileExtension,
+        documentId: String(documentOrder),
+      },
+    ],
+  };
+
+  return await docuSignApiRequest.call(ctx, 'PUT', `/templates/${templateId}/documents`, body);
+}
+
+async function handleTemplateDocumentRemove(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const documentId = ctx.getNodeParameter('documentId', itemIndex) as string;
+  validateField('Template ID', templateId, 'uuid');
+  validateField('Document ID', documentId, 'required');
+  return await docuSignApiRequest.call(ctx, 'DELETE', `/templates/${templateId}/documents/${documentId}`);
+}
+
+// ============================================================================
+// Template Custom Field Handlers
+// ============================================================================
+
+async function handleTemplateCustomFieldCreate(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const fieldName = ctx.getNodeParameter('fieldName', itemIndex) as string;
+  const fieldValue = ctx.getNodeParameter('fieldValue', itemIndex) as string;
+  const show = ctx.getNodeParameter('show', itemIndex, true) as boolean;
+  const required = ctx.getNodeParameter('required', itemIndex, false) as boolean;
+
+  validateField('Template ID', templateId, 'uuid');
+  validateField('Field Name', fieldName, 'required');
+
+  const body: IDataObject = {
+    textCustomFields: [
+      {
+        name: fieldName,
+        value: fieldValue,
+        show: show ? 'true' : 'false',
+        required: required ? 'true' : 'false',
+      },
+    ],
+  };
+
+  return await docuSignApiRequest.call(ctx, 'POST', `/templates/${templateId}/custom_fields`, body);
+}
+
+async function handleTemplateCustomFieldGet(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  validateField('Template ID', templateId, 'uuid');
+  return await docuSignApiRequest.call(ctx, 'GET', `/templates/${templateId}/custom_fields`);
+}
+
+async function handleTemplateCustomFieldUpdate(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const fieldId = ctx.getNodeParameter('fieldId', itemIndex) as string;
+  const updateFields = ctx.getNodeParameter('updateFields', itemIndex, {});
+
+  validateField('Template ID', templateId, 'uuid');
+  validateField('Field ID', fieldId, 'required');
+
+  if (!updateFields || Object.keys(updateFields).length === 0) {
+    throw new Error('At least one update field is required');
+  }
+
+  const field: IDataObject = { fieldId };
+  if (updateFields.name) { field.name = updateFields.name; }
+  if (updateFields.value !== undefined) { field.value = updateFields.value; }
+  if (updateFields.show !== undefined) { field.show = updateFields.show ? 'true' : 'false'; }
+  if (updateFields.required !== undefined) { field.required = updateFields.required ? 'true' : 'false'; }
+
+  const body: IDataObject = {
+    textCustomFields: [field],
+  };
+
+  return await docuSignApiRequest.call(ctx, 'PUT', `/templates/${templateId}/custom_fields`, body);
+}
+
+async function handleTemplateCustomFieldDelete(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const fieldId = ctx.getNodeParameter('fieldId', itemIndex) as string;
+  validateField('Template ID', templateId, 'uuid');
+  validateField('Field ID', fieldId, 'required');
+  return await docuSignApiRequest.call(ctx, 'DELETE', `/templates/${templateId}/custom_fields`, { textCustomFields: [{ fieldId }] });
+}
+
+// ============================================================================
+// Template Lock Handlers
+// ============================================================================
+
+async function handleTemplateLockCreate(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const lockDurationInSeconds = ctx.getNodeParameter('lockDurationInSeconds', itemIndex) as number;
+  const lockedByApp = ctx.getNodeParameter('lockedByApp', itemIndex, 'n8n') as string;
+
+  validateField('Template ID', templateId, 'uuid');
+
+  const body: IDataObject = {
+    lockDurationInSeconds: String(lockDurationInSeconds),
+    lockType: 'edit',
+    lockedByApp,
+  };
+
+  return await docuSignApiRequest.call(ctx, 'POST', `/templates/${templateId}/lock`, body);
+}
+
+async function handleTemplateLockGet(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  validateField('Template ID', templateId, 'uuid');
+  return await docuSignApiRequest.call(ctx, 'GET', `/templates/${templateId}/lock`);
+}
+
+async function handleTemplateLockUpdate(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const lockToken = ctx.getNodeParameter('lockToken', itemIndex) as string;
+  const lockDurationInSeconds = ctx.getNodeParameter('lockDurationInSeconds', itemIndex, 300) as number;
+
+  validateField('Template ID', templateId, 'uuid');
+  validateField('Lock Token', lockToken, 'required');
+
+  const headers: Record<string, string> = {
+    'X-DocuSign-Edit': JSON.stringify({
+      LockToken: lockToken,
+      LockDurationInSeconds: String(lockDurationInSeconds),
+    }),
+  };
+
+  return await docuSignApiRequest.call(
+    ctx,
+    'PUT',
+    `/templates/${templateId}/lock`,
+    {
+      lockDurationInSeconds: String(lockDurationInSeconds),
+      lockType: 'edit',
+    },
+    {},
+    undefined,
+    headers,
+  );
+}
+
+async function handleTemplateLockDelete(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const lockToken = ctx.getNodeParameter('lockToken', itemIndex) as string;
+
+  validateField('Template ID', templateId, 'uuid');
+  validateField('Lock Token', lockToken, 'required');
+
+  const headers: Record<string, string> = {
+    'X-DocuSign-Edit': JSON.stringify({
+      LockToken: lockToken,
+    }),
+  };
+
+  return await docuSignApiRequest.call(
+    ctx,
+    'DELETE',
+    `/templates/${templateId}/lock`,
+    undefined,
+    {},
+    undefined,
+    headers,
+  );
+}
+
+// ============================================================================
+// Template Notification Handlers
+// ============================================================================
+
+async function handleTemplateNotificationGet(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  validateField('Template ID', templateId, 'uuid');
+  return await docuSignApiRequest.call(ctx, 'GET', `/templates/${templateId}/notification`);
+}
+
+async function handleTemplateNotificationUpdate(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const templateId = ctx.getNodeParameter('templateId', itemIndex) as string;
+  const useAccountDefaults = ctx.getNodeParameter('useAccountDefaults', itemIndex, false) as boolean;
+  const reminderSettings = ctx.getNodeParameter('reminderSettings', itemIndex, {}) as IDataObject;
+  const expirationSettings = ctx.getNodeParameter('expirationSettings', itemIndex, {}) as IDataObject;
+
+  validateField('Template ID', templateId, 'uuid');
+
+  const body: IDataObject = {
+    useAccountDefaults: useAccountDefaults ? 'true' : 'false',
+  };
+
+  if (!useAccountDefaults && reminderSettings.reminderEnabled) {
+    body.reminders = {
+      reminderEnabled: 'true',
+      reminderDelay: String(reminderSettings.reminderDelay ?? 2),
+      reminderFrequency: String(reminderSettings.reminderFrequency ?? 1),
+    };
+  }
+
+  if (!useAccountDefaults && expirationSettings.expireEnabled) {
+    body.expirations = {
+      expireEnabled: 'true',
+      expireAfter: String(expirationSettings.expireAfter ?? 120),
+      expireWarn: String(expirationSettings.expireWarn ?? 3),
+    };
+  }
+
+  return await docuSignApiRequest.call(ctx, 'PUT', `/templates/${templateId}/notification`, body);
+}
+
+// ============================================================================
+// Billing Handlers
+// ============================================================================
+
+async function handleBillingGetPlan(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/billing_plan');
+}
+
+async function handleBillingGetAllInvoices(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/billing_invoices');
+}
+
+async function handleBillingGetInvoice(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const invoiceId = ctx.getNodeParameter('invoiceId', itemIndex) as string;
+  validateField('Invoice ID', invoiceId, 'required');
+  return await docuSignApiRequest.call(ctx, 'GET', `/billing_invoices/${invoiceId}`);
+}
+
+async function handleBillingGetAllPayments(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/billing_payments');
+}
+
+async function handleBillingGetPayment(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const paymentId = ctx.getNodeParameter('paymentId', itemIndex) as string;
+  validateField('Payment ID', paymentId, 'required');
+  return await docuSignApiRequest.call(ctx, 'GET', `/billing_payments/${paymentId}`);
+}
+
+// ============================================================================
+// Cloud Storage Handlers
+// ============================================================================
+
+async function handleCloudStorageListProviders(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/cloud_storage');
+}
+
+async function handleCloudStorageListFiles(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const serviceId = ctx.getNodeParameter('serviceId', itemIndex) as string;
+  const additionalOptions = ctx.getNodeParameter('additionalOptions', itemIndex, {}) as IDataObject;
+  validateField('Service ID', serviceId, 'required');
+
+  let endpoint = `/cloud_storage/${encodeURIComponent(serviceId)}/folders`;
+  if (additionalOptions.rootFolderId) {
+    endpoint += `/${encodeURIComponent(String(additionalOptions.rootFolderId))}`;
+  }
+  return await docuSignApiRequest.call(ctx, 'GET', endpoint);
+}
+
+async function handleCloudStorageGetFile(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const serviceId = ctx.getNodeParameter('serviceId', itemIndex) as string;
+  const folderId = ctx.getNodeParameter('folderId', itemIndex) as string;
+  validateField('Service ID', serviceId, 'required');
+  validateField('Folder ID', folderId, 'required');
+  return await docuSignApiRequest.call(ctx, 'GET', `/cloud_storage/${encodeURIComponent(serviceId)}/folders/${encodeURIComponent(folderId)}`);
+}
+
+// ============================================================================
+// Workspace Handlers
+// ============================================================================
+
+async function handleWorkspaceCreate(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const workspaceName = ctx.getNodeParameter('workspaceName', itemIndex) as string;
+  validateField('Workspace Name', workspaceName, 'required');
+  return await docuSignApiRequest.call(ctx, 'POST', '/workspaces', { workspaceName });
+}
+
+async function handleWorkspaceGet(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const workspaceId = ctx.getNodeParameter('workspaceId', itemIndex) as string;
+  validateField('Workspace ID', workspaceId, 'required');
+  return await docuSignApiRequest.call(ctx, 'GET', `/workspaces/${workspaceId}`);
+}
+
+async function handleWorkspaceGetAll(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/workspaces');
+}
+
+async function handleWorkspaceDelete(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const workspaceId = ctx.getNodeParameter('workspaceId', itemIndex) as string;
+  validateField('Workspace ID', workspaceId, 'required');
+  return await docuSignApiRequest.call(ctx, 'DELETE', `/workspaces/${workspaceId}`);
+}
+
+async function handleWorkspaceCreateFile(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const workspaceId = ctx.getNodeParameter('workspaceId', itemIndex) as string;
+  const folderId = ctx.getNodeParameter('folderId', itemIndex) as string;
+  const fileName = ctx.getNodeParameter('fileName', itemIndex) as string;
+  const fileContent = ctx.getNodeParameter('fileContent', itemIndex) as string;
+
+  validateField('Workspace ID', workspaceId, 'required');
+  validateField('Folder ID', folderId, 'required');
+  validateField('File Name', fileName, 'required');
+  validateField('File Content', fileContent, 'required');
+  validateField('File Content', fileContent, 'base64');
+
+  return await docuSignApiRequest.call(
+    ctx,
+    'POST',
+    `/workspaces/${workspaceId}/folders/${folderId}/files`,
+    { fileBase64: fileContent, fileName },
+  );
+}
+
+async function handleWorkspaceGetFiles(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const workspaceId = ctx.getNodeParameter('workspaceId', itemIndex) as string;
+  const folderId = ctx.getNodeParameter('folderId', itemIndex) as string;
+  validateField('Workspace ID', workspaceId, 'required');
+  validateField('Folder ID', folderId, 'required');
+  return await docuSignApiRequest.call(ctx, 'GET', `/workspaces/${workspaceId}/folders/${folderId}`);
+}
+
+// ============================================================================
+// Email Archive Handlers
+// ============================================================================
+
+async function handleEmailArchiveCreate(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const email = ctx.getNodeParameter('email', itemIndex) as string;
+  validateField('Email', email, 'email');
+  return await docuSignApiRequest.call(ctx, 'POST', '/email_archive', { bccEmailAddress: email });
+}
+
+async function handleEmailArchiveGetAll(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/email_archive');
+}
+
+async function handleEmailArchiveDelete(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const bccEmailArchiveId = ctx.getNodeParameter('bccEmailArchiveId', itemIndex) as string;
+  validateField('BCC Archive ID', bccEmailArchiveId, 'required');
+  return await docuSignApiRequest.call(ctx, 'DELETE', `/email_archive/${bccEmailArchiveId}`);
+}
+
+// ============================================================================
+// Diagnostics Handlers
+// ============================================================================
+
+async function handleDiagnosticsGetSettings(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/diagnostics/settings');
+}
+
+async function handleDiagnosticsUpdateSettings(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const apiRequestLogging = ctx.getNodeParameter('apiRequestLogging', itemIndex) as boolean;
+  return await docuSignApiRequest.call(ctx, 'PUT', '/diagnostics/settings', {
+    apiRequestLogging: apiRequestLogging ? 'true' : 'false',
+  });
+}
+
+async function handleDiagnosticsGetLog(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const requestLogId = ctx.getNodeParameter('requestLogId', itemIndex) as string;
+  validateField('Request Log ID', requestLogId, 'required');
+  return await docuSignApiRequest.call(ctx, 'GET', `/diagnostics/request_logs/${requestLogId}`);
+}
+
+// ============================================================================
+// Notary Handlers
+// ============================================================================
+
+async function handleNotaryGet(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/notary');
+}
+
+async function handleNotaryGetJurisdictions(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/notary/jurisdictions');
+}
+
+async function handleNotaryCreate(
+  ctx: IExecuteFunctions,
+  itemIndex: number,
+): Promise<IDataObject> {
+  const firstName = ctx.getNodeParameter('firstName', itemIndex) as string;
+  const lastName = ctx.getNodeParameter('lastName', itemIndex) as string;
+  const email = ctx.getNodeParameter('email', itemIndex) as string;
+  const additionalFields = ctx.getNodeParameter('additionalFields', itemIndex, {});
+
+  validateField('First Name', firstName, 'required');
+  validateField('Last Name', lastName, 'required');
+  validateField('Email', email, 'email');
+
+  const body: IDataObject = { firstName, lastName, email };
+  const extras = additionalFields;
+  if (extras.commissionNumber) { body.commissionNumber = extras.commissionNumber; }
+  if (extras.commissionExpiry) { body.commissionExpiry = extras.commissionExpiry; }
+  if (extras.county) { body.county = extras.county; }
+  if (extras.stateCode) { body.stateCode = extras.stateCode; }
+
+  return await docuSignApiRequest.call(ctx, 'POST', '/notary', body);
+}
+
+// ============================================================================
+// Trust Service Provider Handler
+// ============================================================================
+
+async function handleTrustServiceProviderGetSealProviders(
+  ctx: IExecuteFunctions,
+): Promise<IDataObject> {
+  return await docuSignApiRequest.call(ctx, 'GET', '/trust_service_providers/seal/providers');
+}
 // Main Node Class
 // ============================================================================
 
@@ -4393,6 +4974,186 @@ export class DocuSign implements INodeType {
               responseData = await handleConnectEventRetry(this, i);
               break;
 
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'envelopeNotification') {
+          switch (operation) {
+            case 'get':
+              responseData = await handleEnvelopeNotificationGet(this, i);
+              break;
+            case 'update':
+              responseData = await handleEnvelopeNotificationUpdate(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'templateDocument') {
+          switch (operation) {
+            case 'get':
+              responseData = await handleTemplateDocumentGet(this, i);
+              break;
+            case 'getAll':
+              responseData = await handleTemplateDocumentGetAll(this, i);
+              break;
+            case 'add':
+              responseData = await handleTemplateDocumentAdd(this, i);
+              break;
+            case 'remove':
+              responseData = await handleTemplateDocumentRemove(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'templateCustomField') {
+          switch (operation) {
+            case 'create':
+              responseData = await handleTemplateCustomFieldCreate(this, i);
+              break;
+            case 'get':
+              responseData = await handleTemplateCustomFieldGet(this, i);
+              break;
+            case 'update':
+              responseData = await handleTemplateCustomFieldUpdate(this, i);
+              break;
+            case 'delete':
+              responseData = await handleTemplateCustomFieldDelete(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'templateLock') {
+          switch (operation) {
+            case 'create':
+              responseData = await handleTemplateLockCreate(this, i);
+              break;
+            case 'get':
+              responseData = await handleTemplateLockGet(this, i);
+              break;
+            case 'update':
+              responseData = await handleTemplateLockUpdate(this, i);
+              break;
+            case 'delete':
+              responseData = await handleTemplateLockDelete(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'templateNotification') {
+          switch (operation) {
+            case 'get':
+              responseData = await handleTemplateNotificationGet(this, i);
+              break;
+            case 'update':
+              responseData = await handleTemplateNotificationUpdate(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'billing') {
+          switch (operation) {
+            case 'getPlan':
+              responseData = await handleBillingGetPlan(this);
+              break;
+            case 'getAllInvoices':
+              responseData = await handleBillingGetAllInvoices(this);
+              break;
+            case 'getInvoice':
+              responseData = await handleBillingGetInvoice(this, i);
+              break;
+            case 'getAllPayments':
+              responseData = await handleBillingGetAllPayments(this);
+              break;
+            case 'getPayment':
+              responseData = await handleBillingGetPayment(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'cloudStorage') {
+          switch (operation) {
+            case 'listProviders':
+              responseData = await handleCloudStorageListProviders(this);
+              break;
+            case 'listFiles':
+              responseData = await handleCloudStorageListFiles(this, i);
+              break;
+            case 'getFile':
+              responseData = await handleCloudStorageGetFile(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'workspace') {
+          switch (operation) {
+            case 'create':
+              responseData = await handleWorkspaceCreate(this, i);
+              break;
+            case 'get':
+              responseData = await handleWorkspaceGet(this, i);
+              break;
+            case 'getAll':
+              responseData = await handleWorkspaceGetAll(this);
+              break;
+            case 'delete':
+              responseData = await handleWorkspaceDelete(this, i);
+              break;
+            case 'createFile':
+              responseData = await handleWorkspaceCreateFile(this, i);
+              break;
+            case 'getFiles':
+              responseData = await handleWorkspaceGetFiles(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'emailArchive') {
+          switch (operation) {
+            case 'create':
+              responseData = await handleEmailArchiveCreate(this, i);
+              break;
+            case 'getAll':
+              responseData = await handleEmailArchiveGetAll(this);
+              break;
+            case 'delete':
+              responseData = await handleEmailArchiveDelete(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'diagnostics') {
+          switch (operation) {
+            case 'getSettings':
+              responseData = await handleDiagnosticsGetSettings(this);
+              break;
+            case 'updateSettings':
+              responseData = await handleDiagnosticsUpdateSettings(this, i);
+              break;
+            case 'getLog':
+              responseData = await handleDiagnosticsGetLog(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'notary') {
+          switch (operation) {
+            case 'get':
+              responseData = await handleNotaryGet(this);
+              break;
+            case 'getJurisdictions':
+              responseData = await handleNotaryGetJurisdictions(this);
+              break;
+            case 'create':
+              responseData = await handleNotaryCreate(this, i);
+              break;
+            default:
+              throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
+          }
+        } else if (resource === 'trustServiceProvider') {
+          switch (operation) {
+            case 'getSealProviders':
+              responseData = await handleTrustServiceProviderGetSealProviders(this);
+              break;
             default:
               throw new NodeApiError(this.getNode(), {}, { message: `Unknown operation: ${operation}` });
           }

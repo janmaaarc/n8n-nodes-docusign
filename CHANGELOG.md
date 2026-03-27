@@ -5,6 +5,74 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2026-03-01
+
+### Added
+
+#### Envelope & Template Sub-Resources
+- **Envelope Notifications** - Manage reminder and expiration settings on individual envelopes
+  - Get - Retrieve notification settings for an envelope
+  - Update - Configure reminders (delay, frequency) and expiration (days, warning period)
+- **Template Documents** - Manage documents within templates
+  - Add - Upload new documents to a template with base64 content
+  - Get - Retrieve a specific document from a template
+  - Get Many - List all documents in a template
+  - Remove - Remove a document from a template
+- **Template Custom Fields** - Manage custom metadata fields on templates
+  - Create - Add text custom fields with show/required options
+  - Get - Retrieve custom fields for a template
+  - Update - Modify custom field values
+  - Delete - Remove custom fields from a template
+- **Template Locks** - Prevent concurrent editing of templates
+  - Lock - Lock a template for editing with configurable duration
+  - Get Lock - Check current lock status
+  - Update Lock - Extend or modify an existing lock (X-DocuSign-Edit header)
+  - Unlock - Release a template lock
+- **Template Notifications** - Manage default reminder and expiration settings on templates
+  - Get - Retrieve notification settings for a template
+  - Update - Configure reminders and expiration defaults
+
+#### Account & Administration
+- **Billing** - Retrieve billing information for the account
+  - Get Plan - Retrieve current billing plan details
+  - Get Invoice / Get Many Invoices - Retrieve billing invoices
+  - Get Payment / Get Many Payments - Retrieve billing payment history
+- **Email Archive** - Manage BCC compliance email archiving
+  - Create - Add BCC email archive addresses (RFC 5322 validated)
+  - Get Many - List all BCC email archive configurations
+  - Delete - Remove BCC email archive addresses
+- **Diagnostics** - Manage API request logging for troubleshooting
+  - Get Settings - Retrieve current diagnostics settings
+  - Update Settings - Enable or disable API request logging
+  - Get Log - Retrieve a specific API request log entry
+
+#### External Services
+- **Cloud Storage** - Browse cloud storage providers connected to the account
+  - List Providers - List all connected cloud storage providers
+  - List Files - Browse files in a provider folder
+  - Get File - Retrieve a specific file from cloud storage
+- **Workspaces** - Manage collaboration workspaces
+  - Create - Create a new workspace
+  - Get / Get Many - Retrieve workspace details
+  - Delete - Remove a workspace
+  - Create File - Upload a file to a workspace folder
+  - Get Files - List files in a workspace folder
+- **Notary** - Remote online notarization (RON) support
+  - Get - Retrieve notary profile
+  - Get Jurisdictions - List available notary jurisdictions
+  - Create - Register a notary profile with commission details
+- **Trust Service Providers** - EU eIDAS electronic seal providers
+  - Get Seal Providers - List available seal providers for electronic seals
+
+### Changed
+- **552 Total Tests** - Added 83 new tests across 12 feature test files
+- Added 12 new resource definitions (31 → 43 total resources)
+- Added 40 new handler functions and 12 dispatch blocks
+- Added 12 new type definitions (types.ts)
+- Extended resource endpoint mapping (constants.ts)
+
+---
+
 ## [0.10.0] - 2026-02-24
 
 ### Added

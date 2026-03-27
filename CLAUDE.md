@@ -15,29 +15,35 @@ nodes/DocuSign/
 ├── helpers.ts                # API helpers, validation, retry logic
 ├── constants.ts              # API URLs, status codes, defaults
 ├── types.ts                  # TypeScript interfaces
-└── resources/                # UI field definitions by resource
+└── resources/                # UI field definitions by resource (43 resources)
     ├── accountCustomField.ts
     ├── accountGroup.ts
     ├── accountUser.ts
+    ├── billing.ts
     ├── brand.ts
     ├── bulkSend.ts
     ├── chunkedUpload.ts
+    ├── cloudStorage.ts
     ├── comments.ts
     ├── compositeTemplate.ts
     ├── connectConfig.ts
     ├── connectEvent.ts
     ├── contact.ts
     ├── customTab.ts
+    ├── diagnostics.ts
     ├── documentGeneration.ts
+    ├── emailArchive.ts
     ├── envelope.ts
     ├── envelopeAttachment.ts
     ├── envelopeCustomField.ts
     ├── envelopeDocumentField.ts
     ├── envelopeEmailSetting.ts
     ├── envelopeLock.ts
+    ├── envelopeNotification.ts
     ├── envelopeTransfer.ts
     ├── folder.ts
     ├── idVerification.ts
+    ├── notary.ts
     ├── paymentTab.ts
     ├── permissionProfile.ts
     ├── powerForm.ts
@@ -46,7 +52,13 @@ nodes/DocuSign/
     ├── signingGroup.ts
     ├── supplementalDoc.ts
     ├── template.ts
+    ├── templateCustomField.ts
+    ├── templateDocument.ts
+    ├── templateLock.ts
+    ├── templateNotification.ts
     ├── templateRecipients.ts
+    ├── trustServiceProvider.ts
+    ├── workspace.ts
     └── index.ts
 
 credentials/
@@ -57,31 +69,43 @@ test/
 ├── setup/
 │   ├── mockContext.ts           # Shared mock context factory
 │   └── constants.ts             # Shared test constants
-└── features/                    # Feature-specific tests (149 tests)
+└── features/                    # Feature-specific tests (182 tests)
     ├── accountCustomField.test.ts
     ├── accountGroup.test.ts
     ├── accountUser.test.ts
+    ├── billing.test.ts
     ├── chunkedUpload.test.ts
+    ├── cloudStorage.test.ts
     ├── comments.test.ts
     ├── compositeTemplate.test.ts
     ├── connectConfig.test.ts
     ├── connectEvent.test.ts
     ├── contact.test.ts
     ├── customTab.test.ts
+    ├── diagnostics.test.ts
+    ├── emailArchive.test.ts
     ├── envelopeAttachment.test.ts
     ├── envelopeCustomField.test.ts
     ├── envelopeDocumentField.test.ts
     ├── envelopeEmailSetting.test.ts
+    ├── envelopeNotification.test.ts
     ├── envelopeTransfer.test.ts
     ├── envelopeViews.test.ts
     ├── idVerification.test.ts
+    ├── notary.test.ts
     ├── paymentTab.test.ts
     ├── permissionProfile.test.ts
     ├── powerFormData.test.ts
     ├── recipientTabs.test.ts
     ├── scheduledRouting.test.ts
     ├── supplementalDoc.test.ts
-    └── templateRecipients.test.ts
+    ├── templateCustomField.test.ts
+    ├── templateDocument.test.ts
+    ├── templateLock.test.ts
+    ├── templateNotification.test.ts
+    ├── templateRecipients.test.ts
+    ├── trustServiceProvider.test.ts
+    └── workspace.test.ts
 ```
 
 ## Critical Rules
